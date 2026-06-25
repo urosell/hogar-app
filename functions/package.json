@@ -1,0 +1,11 @@
+{
+  "name": "hogar-functions",
+  "description": "Cloud Functions: envío de notificaciones push respetando las preferencias del usuario.",
+  "type": "module",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.5.0",
+    "firebase-functions": "^5.1.0"
+  }
+}

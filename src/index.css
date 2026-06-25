@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* alturas seguras para iOS (notch) */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-crema text-bosque font-sans antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
+  /* Evita el zoom al hacer focus en inputs en iOS */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-bold
+      transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-primario {
+    @apply btn bg-oliva text-crema-claro shadow-suave hover:bg-oliva-oscuro;
+  }
+  .btn-secundario {
+    @apply btn bg-crema-oscuro text-bosque hover:bg-salvia-claro;
+  }
+  .btn-fantasma {
+    @apply btn bg-transparent text-oliva hover:bg-crema-oscuro;
+  }
+  .tarjeta {
+    @apply rounded-xl2 bg-crema-claro p-4 shadow-suave;
+  }
+  .input {
+    @apply w-full rounded-2xl border border-crema-oscuro bg-crema-claro px-4 py-3 text-bosque
+      placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-2 focus:ring-oliva/30;
+  }
+  .etiqueta {
+    @apply mb-1.5 block text-sm font-bold text-oliva-oscuro;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold;
+  }
+}
+
+/* Transición de tabs */
+.fade-in {
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scroll horizontal suave para el gráfico */
+.scroll-x {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
