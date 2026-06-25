@@ -4,34 +4,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Tema "Marvie": dark mode (navy) con acento verde menta y coral.
-        // Se conservan los NOMBRES de tokens originales para no reescribir
-        // todas las clases; solo cambian los valores.
-        // crema → superficies oscuras (fondo app, tarjetas, bordes)
+        // Tokens temáticos: los valores viven en variables CSS (ver index.css),
+        // con dos temas — 'night' (Marvie dark, por defecto) y 'day' (gris claro).
+        // El formato rgb(var(--x) / <alpha-value>) mantiene los modificadores de
+        // opacidad de Tailwind (bg-crema/90, etc.).
         crema: {
-          DEFAULT: '#19282F', // fondo de la app (navy)
-          claro: '#22333C', // tarjetas e inputs
-          oscuro: '#2A3D47', // bordes y fondos secundarios
+          DEFAULT: 'rgb(var(--crema) / <alpha-value>)',
+          claro: 'rgb(var(--crema-claro) / <alpha-value>)',
+          oscuro: 'rgb(var(--crema-oscuro) / <alpha-value>)',
         },
-        // salvia → acento menta / tinte de chip / texto atenuado
         salvia: {
-          DEFAULT: '#3DD598', // menta (bordes de acento, spinner)
-          claro: '#2C4A43', // tinte menta oscuro para chips/avatares
-          oscuro: '#92A0AC', // texto atenuado / placeholder / nav inactiva
+          DEFAULT: 'rgb(var(--salvia) / <alpha-value>)',
+          claro: 'rgb(var(--salvia-claro) / <alpha-value>)',
+          oscuro: 'rgb(var(--salvia-oscuro) / <alpha-value>)',
         },
-        // oliva → primario (botones, activos). oscuro = texto atenuado (uso mayoritario)
         oliva: {
-          DEFAULT: '#3DD598', // menta
-          claro: '#5CE0AC',
-          oscuro: '#92A0AC', // (text-oliva-oscuro = muted; hover de botón via opacity)
+          DEFAULT: 'rgb(var(--oliva) / <alpha-value>)',
+          claro: 'rgb(var(--oliva-claro) / <alpha-value>)',
+          oscuro: 'rgb(var(--oliva-oscuro) / <alpha-value>)',
         },
-        // bosque → texto principal (claro sobre fondo oscuro)
-        bosque: '#FFFFFF',
-        // marrón → acento coral cálido (eliminar, badges, avisos)
+        bosque: 'rgb(var(--bosque) / <alpha-value>)',
         marron: {
-          DEFAULT: '#FF575F',
-          claro: '#FF8A8F',
-          oscuro: '#FF7A80',
+          DEFAULT: 'rgb(var(--marron) / <alpha-value>)',
+          claro: 'rgb(var(--marron-claro) / <alpha-value>)',
+          oscuro: 'rgb(var(--marron-oscuro) / <alpha-value>)',
         },
       },
       fontFamily: {
@@ -39,8 +35,8 @@ export default {
         display: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        suave: '0 2px 12px rgba(0, 0, 0, 0.25)',
-        tarjeta: '0 8px 28px rgba(0, 0, 0, 0.38)',
+        suave: 'var(--shadow-suave)',
+        tarjeta: 'var(--shadow-tarjeta)',
       },
       borderRadius: {
         xl2: '1.5rem',

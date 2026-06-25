@@ -7,6 +7,45 @@
     /* alturas seguras para iOS (notch) */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* ── Tema NOCHE (Marvie dark) — por defecto ──
+       Valores en canales RGB separados por espacios (para rgb(var(--x)/a)). */
+    --crema: 25 40 47; /* #19282F fondo */
+    --crema-claro: 34 51 60; /* #22333C tarjetas */
+    --crema-oscuro: 42 61 71; /* #2A3D47 bordes/2º */
+    --salvia: 61 213 152; /* #3DD598 menta */
+    --salvia-claro: 44 74 67; /* #2C4A43 tinte menta */
+    --salvia-oscuro: 146 160 172; /* #92A0AC atenuado */
+    --oliva: 61 213 152; /* #3DD598 primario */
+    --oliva-claro: 92 224 172; /* #5CE0AC */
+    --oliva-oscuro: 146 160 172; /* #92A0AC texto atenuado */
+    --bosque: 255 255 255; /* texto principal */
+    --marron: 255 87 95; /* #FF575F coral */
+    --marron-claro: 255 138 143; /* #FF8A8F */
+    --marron-oscuro: 255 122 128; /* #FF7A80 */
+    --shadow-suave: 0 2px 12px rgba(0, 0, 0, 0.25);
+    --shadow-tarjeta: 0 8px 28px rgba(0, 0, 0, 0.38);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.08);
+  }
+
+  /* ── Tema DÍA (gris claro) ── */
+  :root[data-theme='day'] {
+    --crema: 237 239 242; /* #EDEFF2 fondo gris claro */
+    --crema-claro: 255 255 255; /* tarjetas blancas */
+    --crema-oscuro: 220 225 230; /* #DCE1E6 bordes/2º */
+    --salvia: 43 197 137; /* #2BC589 menta */
+    --salvia-claro: 214 243 231; /* #D6F3E7 tinte menta claro */
+    --salvia-oscuro: 107 118 130; /* #6B7682 atenuado */
+    --oliva: 20 160 107; /* #14A06B verde primario (texto blanco OK) */
+    --oliva-claro: 43 197 137; /* #2BC589 */
+    --oliva-oscuro: 74 85 96; /* #4A5560 texto atenuado fuerte */
+    --bosque: 27 42 51; /* #1B2A33 texto principal */
+    --marron: 229 72 77; /* #E5484D coral */
+    --marron-claro: 242 120 124; /* #F2787C */
+    --marron-oscuro: 179 50 47; /* #B3322F */
+    --shadow-suave: 0 2px 12px rgba(20, 40, 60, 0.08);
+    --shadow-tarjeta: 0 8px 24px rgba(20, 40, 60, 0.12);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.6);
   }
 
   html,
@@ -102,7 +141,7 @@
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: #2A3D47; /* crema-oscuro (dark) */
+  background-color: rgb(var(--crema-oscuro));
   border-radius: 0.75rem;
 }
 .skeleton::after {
@@ -113,7 +152,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.08),
+    var(--skeleton-shimmer),
     transparent
   );
   animation: shimmer 1.4s infinite;

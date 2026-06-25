@@ -16,6 +16,17 @@
       rel="stylesheet"
     />
     <title>Hogar</title>
+    <!-- Aplica el tema guardado antes de pintar, para evitar parpadeo -->
+    <script>
+      try {
+        var t = localStorage.getItem('tema')
+        if (t === 'day') {
+          document.documentElement.setAttribute('data-theme', 'day')
+          var m = document.querySelector('meta[name="theme-color"]')
+          if (m) m.setAttribute('content', '#EDEFF2')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

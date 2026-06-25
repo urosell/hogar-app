@@ -8,7 +8,8 @@ import {
 } from '../firebase/firebaseService'
 import { activarNotificaciones, notificacionesSoportadas } from '../firebase/messaging'
 import { AVATARES } from '../data/constantes'
-import { Modal, Avatar } from '../components/ui'
+import { Modal, Avatar, IconoSol, IconoLuna } from '../components/ui'
+import { useTheme } from '../context/ThemeContext'
 
 const TIPOS = [
   { clave: 'tareas', label: 'Tareas', desc: 'Tareas completadas y por aprobar', emoji: '✅' },
@@ -18,6 +19,7 @@ const TIPOS = [
 
 export default function Ajustes({ abierto, onCerrar }) {
   const { uid, usuario, hogar, companero } = useApp()
+  const { theme, setTheme } = useTheme()
   const [nombre, setNombre] = useState('')
   const [icono, setIcono] = useState('')
   const [editandoAvatar, setEditandoAvatar] = useState(false)
@@ -98,6 +100,25 @@ export default function Ajustes({ abierto, onCerrar }) {
             ) : (
               <p className="max-w-[8rem] text-right text-xs text-oliva-oscuro/60">Comparte el código para que se una tu pareja</p>
             )}
+          </div>
+        </section>
+
+        {/* Apariencia */}
+        <section>
+          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">Apariencia</h3>
+          <div className="flex gap-2 rounded-2xl bg-crema-oscuro/60 p-1">
+            <button
+              onClick={() => setTheme('day')}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-colors ${theme === 'day' ? 'bg-oliva text-crema-claro' : 'text-oliva-oscuro'}`}
+            >
+              <IconoSol className="h-5 w-5" /> Día
+            </button>
+            <button
+              onClick={() => setTheme('night')}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-colors ${theme === 'night' ? 'bg-oliva text-crema-claro' : 'text-oliva-oscuro'}`}
+            >
+              <IconoLuna className="h-5 w-5" /> Noche
+            </button>
           </div>
         </section>
 

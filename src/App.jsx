@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useApp } from './context/AppContext'
 import { firebaseConfigurado } from './firebase/config'
 import { escucharMensajesPrimerPlano } from './firebase/messaging'
-import { Cargando, IconoAjustes } from './components/ui'
+import { Cargando, IconoAjustes, IconoSol, IconoLuna } from './components/ui'
+import { useTheme } from './context/ThemeContext'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
 import OnboardingHogar from './pages/OnboardingHogar'
@@ -17,6 +18,7 @@ const TITULOS = { tareas: 'Tareas de casa', compra: 'Lista de la compra', gym: '
 
 export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario } = useApp()
+  const { theme, toggle } = useTheme()
   const [tab, setTab] = useState('tareas')
   const [ajustesAbierto, setAjustesAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
@@ -51,13 +53,22 @@ export default function App() {
         style={{ paddingTop: 'calc(0.75rem + var(--safe-top))' }}
       >
         <h1 className="text-2xl font-bold text-bosque">{TITULOS[tab]}</h1>
-        <button
-          onClick={() => setAjustesAbierto(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
-          aria-label="Ajustes"
-        >
-          <IconoAjustes />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggle}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            aria-label={theme === 'day' ? 'Cambiar a modo noche' : 'Cambiar a modo día'}
+          >
+            {theme === 'day' ? <IconoLuna /> : <IconoSol />}
+          </button>
+          <button
+            onClick={() => setAjustesAbierto(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            aria-label="Ajustes"
+          >
+            <IconoAjustes />
+          </button>
+        </div>
       </header>
 
       {/* Contenido — las tres pestañas se mantienen montadas y solo se

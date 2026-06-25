@@ -271,8 +271,8 @@ function FormAnadir({ frecuentes, onAnadir }) {
       <div className="scroll-x flex gap-1.5 overflow-x-auto pb-1">
         {CATEGORIAS.map((c) => (
           <button type="button" key={c.nombre} onClick={() => setCategoria(c.nombre)}
-            className={`chip shrink-0 border transition-colors ${categoria === c.nombre ? 'text-crema-claro' : 'text-oliva-oscuro'}`}
-            style={categoria === c.nombre ? { backgroundColor: c.color, borderColor: c.color } : { borderColor: '#2A3D47', backgroundColor: '#22333C' }}>
+            className={`chip shrink-0 border transition-colors ${categoria === c.nombre ? 'border-transparent text-crema-claro' : 'border-crema-oscuro bg-crema-claro text-oliva-oscuro'}`}
+            style={categoria === c.nombre ? { backgroundColor: c.color, borderColor: c.color } : undefined}>
             {c.emoji} {c.nombre}
           </button>
         ))}
@@ -342,10 +342,15 @@ function HistorialLista({ historial, porUid, onDesmarcar }) {
 }
 
 function FiltroChip({ activo, onClick, children, color }) {
+  const activoSinColor = activo && !color
   return (
     <button onClick={onClick}
-      className={`chip shrink-0 border ${activo ? 'text-crema-claro' : 'text-oliva-oscuro'}`}
-      style={activo ? { backgroundColor: color || '#3DD598', borderColor: color || '#3DD598' } : { borderColor: '#2A3D47', backgroundColor: '#22333C' }}>
+      className={`chip shrink-0 border ${
+        activo
+          ? `border-transparent text-crema-claro ${activoSinColor ? 'bg-oliva' : ''}`
+          : 'border-crema-oscuro bg-crema-claro text-oliva-oscuro'
+      }`}
+      style={activo && color ? { backgroundColor: color, borderColor: color } : undefined}>
       {children}
     </button>
   )

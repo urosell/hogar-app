@@ -9,21 +9,7 @@ import {
 } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
 import { nivelDesdePuntos } from '../data/constantes'
-import { Modal, IconoMas } from '../components/ui'
-
-// ── PRUEBA DE ESTILO: tema "Marvie" (dark + mint), aislado en esta pantalla.
-// Colores explícitos para no tocar los tokens globales (resto de la app intacto).
-const M = {
-  bg: '#19282F',
-  card: '#22333C',
-  card2: '#2A3D47',
-  mint: '#3DD598',
-  coral: '#FF575F',
-  text: '#FFFFFF',
-  muted: '#92A0AC',
-  track: '#33454F',
-}
-const FUENTE = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 
 const DIA = 24 * 60 * 60 * 1000
 
@@ -101,80 +87,74 @@ export default function Tareas() {
   }
 
   return (
-    // Panel a sangre completa con fondo oscuro (escapa del padding del main).
-    <div
-      className="-mx-4 -mt-1 min-h-[calc(100vh-8rem)] rounded-t-[28px] px-4 pb-32 pt-5"
-      style={{ backgroundColor: M.bg, color: M.text, fontFamily: FUENTE }}
-    >
-      <div className="space-y-4">
-        <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
+    <div className="space-y-4">
+      <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
 
-        {/* Selector de sección (segmented control) */}
-        <div className="flex gap-1 rounded-full p-1" style={{ backgroundColor: M.card }}>
-          <BotonSeccion activo={seccion === 'activas'} onClick={() => setSeccion('activas')}>
-            Activas
-          </BotonSeccion>
-          <BotonSeccion activo={seccion === 'aprobar'} onClick={() => setSeccion('aprobar')} badge={porAprobarYo.length}>
-            Por aprobar
-          </BotonSeccion>
-        </div>
-
-        {seccion === 'activas' && (
-          <>
-            {!cargado ? (
-              <SkeletonDark filas={3} />
-            ) : paraHacer.length === 0 && descansando.length === 0 ? (
-              <VacioDark emoji="🧹" titulo="No hay tareas activas" texto="Crea una nueva con el botón +" />
-            ) : (
-              <>
-                {paraHacer.map((t) => (
-                  <TareaCard key={t.id} tarea={t} porUid={porUid} onCompletar={() => pedirCompletar(t)} saliendo={completando === t.id} />
-                ))}
-                {descansando.length > 0 && (
-                  <div className="pt-2">
-                    <h3 className="mb-2 text-sm font-bold" style={{ color: M.muted }}>Descansando 💤</h3>
-                    {descansando.map((t) => (
-                      <TareaCard key={t.id} tarea={t} porUid={porUid} descansando />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-
-        {seccion === 'aprobar' && (
-          <>
-            {solo && (
-              <p className="rounded-xl px-3 py-2 text-xs" style={{ backgroundColor: M.card, color: M.muted }}>
-                Estás solo en el hogar: puedes aprobar tus propias tareas hasta que tu pareja se una.
-              </p>
-            )}
-            {!cargado ? (
-              <SkeletonDark filas={2} />
-            ) : pendientes.length === 0 ? (
-              <VacioDark emoji="📝" titulo="Nada pendiente de aprobar" />
-            ) : (
-              pendientes.map((t) => (
-                <TareaPendiente
-                  key={t.id}
-                  tarea={t}
-                  esMia={t.creadaPor === uid && !solo}
-                  creador={porUid[t.creadaPor]}
-                  onAprobar={() => handleAprobar(t)}
-                  onRechazar={() => handleRechazar(t)}
-                />
-              ))
-            )}
-          </>
-        )}
+      {/* Selector de sección (segmented control) */}
+      <div className="flex gap-1 rounded-full bg-crema-claro p-1 shadow-suave">
+        <BotonSeccion activo={seccion === 'activas'} onClick={() => setSeccion('activas')}>
+          Activas
+        </BotonSeccion>
+        <BotonSeccion activo={seccion === 'aprobar'} onClick={() => setSeccion('aprobar')} badge={porAprobarYo.length}>
+          Por aprobar
+        </BotonSeccion>
       </div>
+
+      {seccion === 'activas' && (
+        <>
+          {!cargado ? (
+            <SkeletonTarjetas filas={3} />
+          ) : paraHacer.length === 0 && descansando.length === 0 ? (
+            <Vacio emoji="🧹" titulo="No hay tareas activas" texto="Crea una nueva con el botón +" />
+          ) : (
+            <>
+              {paraHacer.map((t) => (
+                <TareaCard key={t.id} tarea={t} porUid={porUid} onCompletar={() => pedirCompletar(t)} saliendo={completando === t.id} />
+              ))}
+              {descansando.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="mb-2 text-sm font-bold text-oliva-oscuro">Descansando 💤</h3>
+                  {descansando.map((t) => (
+                    <TareaCard key={t.id} tarea={t} porUid={porUid} descansando />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {seccion === 'aprobar' && (
+        <>
+          {solo && (
+            <p className="rounded-xl bg-crema-claro px-3 py-2 text-xs text-oliva-oscuro">
+              Estás solo en el hogar: puedes aprobar tus propias tareas hasta que tu pareja se una.
+            </p>
+          )}
+          {!cargado ? (
+            <SkeletonTarjetas filas={2} />
+          ) : pendientes.length === 0 ? (
+            <Vacio emoji="📝" titulo="Nada pendiente de aprobar" />
+          ) : (
+            pendientes.map((t) => (
+              <TareaPendiente
+                key={t.id}
+                tarea={t}
+                esMia={t.creadaPor === uid && !solo}
+                creador={porUid[t.creadaPor]}
+                onAprobar={() => handleAprobar(t)}
+                onRechazar={() => handleRechazar(t)}
+              />
+            ))
+          )}
+        </>
+      )}
 
       {/* Botón flotante crear */}
       <button
         onClick={() => setModalAbierto(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-tarjeta active:scale-95"
-        style={{ marginBottom: 'var(--safe-bottom)', backgroundColor: M.mint, color: M.bg }}
+        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label="Nueva tarea"
       >
         <IconoMas className="h-7 w-7" />
@@ -222,7 +202,7 @@ export default function Tareas() {
 function BarraPuntos({ miembros, uidActual, festejo }) {
   const ordenados = [...miembros].sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
   return (
-    <div className="flex items-stretch justify-around gap-2 rounded-[24px] p-4" style={{ backgroundColor: M.card }}>
+    <div className="tarjeta flex items-stretch justify-around gap-2">
       {ordenados.map((m) => {
         const nivel = nivelDesdePuntos(m.puntos || 0)
         const esActual = m.id === uidActual
@@ -233,33 +213,32 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
             {festeja && (
               <span
                 key={festejo.key}
-                className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold shadow-tarjeta"
-                style={{ backgroundColor: M.mint, color: M.bg }}
+                className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-oliva px-2.5 py-1 text-sm font-bold text-crema-claro shadow-tarjeta"
               >
                 +{festejo.puntos} pts
               </span>
             )}
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-full text-3xl"
-              style={{ backgroundColor: M.card2, boxShadow: esActual ? `0 0 0 2px ${M.mint}` : 'none' }}
+              className={`flex h-14 w-14 items-center justify-center rounded-full bg-crema-oscuro text-3xl ${
+                esActual ? 'ring-2 ring-oliva' : ''
+              }`}
             >
               {m.icono || '🙂'}
             </div>
-            <p className="text-sm font-bold" style={{ color: M.text }}>{m.nombre || '—'}</p>
-            <p className={`text-xl font-extrabold ${festeja ? 'late' : ''}`} style={{ color: M.mint }}>
+            <p className="text-sm font-bold text-bosque">{m.nombre || '—'}</p>
+            <p className={`text-xl font-extrabold text-oliva ${festeja ? 'late' : ''}`}>
               {m.puntos || 0} <span className="text-xs font-bold">pts</span>
             </p>
             <span
-              className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-              style={{ backgroundColor: M.card2, color: M.muted }}
+              className="rounded-full bg-crema-oscuro px-2.5 py-0.5 text-[11px] font-bold text-oliva-oscuro"
               title={nivel.siguiente ? `Faltan ${nivel.faltan} pts para ${nivel.siguiente.nombre}` : '¡Nivel máximo!'}
             >
               {nivel.actual.emoji} Nv.{nivel.nivel}
             </span>
-            <div className="h-1.5 w-full max-w-[5.5rem] overflow-hidden rounded-full" style={{ backgroundColor: M.track }}>
+            <div className="h-1.5 w-full max-w-[5.5rem] overflow-hidden rounded-full bg-crema-oscuro">
               <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.round(nivel.progreso * 100)}%`, backgroundColor: M.mint }}
+                className="h-full rounded-full bg-oliva transition-all duration-500"
+                style={{ width: `${Math.round(nivel.progreso * 100)}%` }}
               />
             </div>
           </div>
@@ -267,13 +246,10 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
       })}
       {miembros.length < 2 && (
         <div className="flex flex-1 flex-col items-center justify-center gap-1.5 opacity-60">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-2xl"
-            style={{ borderColor: M.track, color: M.muted }}
-          >
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-crema-oscuro text-2xl text-oliva-oscuro">
             ➕
           </div>
-          <p className="text-xs font-bold" style={{ color: M.muted }}>Esperando…</p>
+          <p className="text-xs font-bold text-oliva-oscuro">Esperando…</p>
         </div>
       )}
     </div>
@@ -284,15 +260,13 @@ function BotonSeccion({ activo, onClick, children, badge }) {
   return (
     <button
       onClick={onClick}
-      className="relative flex-1 rounded-full py-2.5 text-sm font-bold transition-colors"
-      style={activo ? { backgroundColor: M.mint, color: M.bg } : { backgroundColor: 'transparent', color: M.muted }}
+      className={`relative flex-1 rounded-full py-2.5 text-sm font-bold transition-colors ${
+        activo ? 'bg-oliva text-crema-claro' : 'bg-transparent text-oliva-oscuro'
+      }`}
     >
       {children}
       {badge > 0 && (
-        <span
-          className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold"
-          style={{ backgroundColor: M.coral, color: M.text }}
-        >
+        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-marron px-1 text-xs font-bold text-crema-claro">
           {badge}
         </span>
       )}
@@ -300,44 +274,28 @@ function BotonSeccion({ activo, onClick, children, badge }) {
   )
 }
 
-function Chip({ children, bg, color }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: bg, color }}>
-      {children}
-    </span>
-  )
-}
-
 function TareaCard({ tarea, porUid, onCompletar, descansando, saliendo }) {
   const ultimo = porUid[tarea.ultimoCompletadoPor]
   return (
-    <div
-      className={`mb-3 flex items-center gap-3 rounded-[20px] p-4 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}
-      style={{ backgroundColor: M.card }}
-    >
+    <div className={`tarjeta mb-3 flex items-center gap-3 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}>
       <div className="flex-1">
-        <p className="font-bold" style={{ color: M.text }}>{tarea.nombre}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs" style={{ color: M.muted }}>
-          <Chip bg="rgba(61,213,152,0.16)" color={M.mint}>+{tarea.puntos} pts</Chip>
+        <p className="font-bold text-bosque">{tarea.nombre}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
+          <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
           {tarea.periodicidadDias != null ? (
-            <Chip bg={M.card2} color={M.muted}>cada {tarea.periodicidadDias}d</Chip>
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">cada {tarea.periodicidadDias}d</span>
           ) : (
-            <Chip bg={M.card2} color={M.muted}>una vez</Chip>
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">una vez</span>
           )}
           {descansando ? (
-            <span className="font-bold" style={{ color: M.coral }}>vuelve en {diasRestantes(tarea.proximaAparicion)}d</span>
+            <span className="font-bold text-marron">vuelve en {diasRestantes(tarea.proximaAparicion)}d</span>
           ) : (
             ultimo && <span>última vez: {ultimo.icono} {ultimo.nombre}</span>
           )}
         </div>
       </div>
       {!descansando && (
-        <button
-          onClick={onCompletar}
-          disabled={saliendo}
-          className="shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-sm font-bold transition-transform active:scale-95"
-          style={{ backgroundColor: M.mint, color: M.bg }}
-        >
+        <button onClick={onCompletar} disabled={saliendo} className="btn-primario shrink-0 cursor-pointer px-4 py-2.5 text-sm">
           ✓ Hecha
         </button>
       )}
@@ -347,65 +305,32 @@ function TareaCard({ tarea, porUid, onCompletar, descansando, saliendo }) {
 
 function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
   return (
-    <div className="mb-3 rounded-[20px] p-4" style={{ backgroundColor: M.card }}>
+    <div className="tarjeta mb-3">
       <div className="flex items-center justify-between">
-        <p className="font-bold" style={{ color: M.text }}>{tarea.nombre}</p>
-        <Chip bg="rgba(61,213,152,0.16)" color={M.mint}>+{tarea.puntos} pts</Chip>
+        <p className="font-bold text-bosque">{tarea.nombre}</p>
+        <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
       </div>
-      <p className="mt-1.5 text-xs" style={{ color: M.muted }}>
+      <p className="mt-1.5 text-xs text-oliva-oscuro">
         {tarea.periodicidadDias != null ? `Recurrente cada ${tarea.periodicidadDias} días` : 'Una sola vez'}
         {creador && ` · propuesta por ${creador.icono} ${creador.nombre}`}
       </p>
       {esMia ? (
-        <p className="mt-3 rounded-xl px-3 py-2 text-center text-sm font-bold" style={{ backgroundColor: M.card2, color: M.muted }}>
+        <p className="mt-3 rounded-xl bg-crema-oscuro px-3 py-2 text-center text-sm font-bold text-oliva-oscuro">
           ⏳ Esperando aprobación de tu pareja
         </p>
       ) : (
         <div className="mt-3 flex gap-2">
-          <button
-            onClick={onAprobar}
-            className="flex-1 rounded-full py-2.5 text-sm font-bold transition-transform active:scale-95"
-            style={{ backgroundColor: M.mint, color: M.bg }}
-          >
+          <button onClick={onAprobar} className="btn-primario flex-1 py-2.5 text-sm">
             ✓ Aprobar
           </button>
           <button
             onClick={onRechazar}
-            className="flex-1 rounded-full py-2.5 text-sm font-bold transition-transform active:scale-95"
-            style={{ backgroundColor: 'transparent', color: M.coral, boxShadow: `inset 0 0 0 1.5px ${M.coral}` }}
+            className="flex-1 rounded-full border border-marron py-2.5 text-sm font-bold text-marron transition-transform active:scale-95"
           >
             ✕ Rechazar
           </button>
         </div>
       )}
-    </div>
-  )
-}
-
-// Estado vacío en versión oscura.
-function VacioDark({ emoji = '🌱', titulo, texto }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[24px] px-6 py-12 text-center" style={{ backgroundColor: M.card }}>
-      <span className="text-5xl">{emoji}</span>
-      <p className="text-lg font-bold" style={{ color: M.text }}>{titulo}</p>
-      {texto && <p className="text-sm" style={{ color: M.muted }}>{texto}</p>}
-    </div>
-  )
-}
-
-// Skeleton de carga en versión oscura.
-function SkeletonDark({ filas = 3 }) {
-  return (
-    <div className="space-y-3" aria-busy="true" aria-label="Cargando…">
-      {Array.from({ length: filas }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-[20px] p-4" style={{ backgroundColor: M.card }}>
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-2/3 rounded-lg" style={{ backgroundColor: M.card2 }} />
-            <div className="h-3 w-1/3 rounded-lg" style={{ backgroundColor: M.card2 }} />
-          </div>
-          <div className="h-9 w-20 rounded-full" style={{ backgroundColor: M.card2 }} />
-        </div>
-      ))}
     </div>
   )
 }

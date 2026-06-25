@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
+import { useTheme } from '../context/ThemeContext'
 import { escucharGymRango, alternarGym, claveFecha } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
 import { Vacio, IconoFlecha, Skeleton } from '../components/ui'
@@ -21,8 +22,16 @@ function inicioSemana(d) {
   return x
 }
 
+// Colores del gráfico según el tema (Recharts requiere valores explícitos).
+const GRAFICO = {
+  night: { grid: '#33454F', tick: '#92A0AC', tipBg: '#22333C', tipText: '#FFFFFF', tipBorder: '#2A3D47' },
+  day: { grid: '#DCE1E6', tick: '#6B7682', tipBg: '#FFFFFF', tipText: '#1B2A33', tipBorder: '#DCE1E6' },
+}
+
 export default function Gym() {
   const { hogarId, uid, usuario, miembros } = useApp()
+  const { theme } = useTheme()
+  const g = GRAFICO[theme] || GRAFICO.night
   const [gym, setGym] = useState({}) // mapa clave -> [uids] (rango amplio: 12 meses)
   const [cargado, setCargado] = useState(false)
   const [mesVista, setMesVista] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
@@ -169,10 +178,10 @@ export default function Gym() {
             <div style={{ minWidth: Math.max(320, datosGrafico.length * 52) }}>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={datosGrafico} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#33454F" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#92A0AC' }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#92A0AC' }} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #2A3D47', backgroundColor: '#22333C', color: '#fff', fontSize: 13 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={g.grid} vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: g.tick }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: g.tick }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: `1px solid ${g.tipBorder}`, backgroundColor: g.tipBg, color: g.tipText, fontSize: 13 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   {miembros.map((m) => (
                     <Bar key={m.id} dataKey={m.id} name={m.nombre} fill={colorDe[m.id]} radius={[4, 4, 0, 0]} maxBarSize={18} />
