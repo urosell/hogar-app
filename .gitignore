@@ -28,3 +28,6 @@ Thumbs.db
 
 # Misc
 *.local
+
+# Recursos de diseño (no parte de la app)
+*.sketch

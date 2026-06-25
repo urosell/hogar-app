@@ -35,7 +35,7 @@ export default function Login() {
         </div>
       </div>
 
-      <button onClick={handleLogin} disabled={cargando} className="btn w-full max-w-xs bg-crema-claro text-bosque shadow-tarjeta hover:bg-white">
+      <button onClick={handleLogin} disabled={cargando} className="btn w-full max-w-xs bg-crema-claro text-bosque shadow-tarjeta hover:bg-crema-oscuro">
         <GoogleIcon />
         {cargando ? 'Entrando…' : 'Entrar con Google'}
       </button>

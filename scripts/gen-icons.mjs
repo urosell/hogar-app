@@ -11,9 +11,9 @@ const OUT = join(__dirname, '..', 'public', 'icons')
 mkdirSync(OUT, { recursive: true })
 
 const COL = {
-  fondo: [88, 129, 87, 255], // oliva #588157
-  casa: [245, 241, 232, 255], // crema #F5F1E8
-  puerta: [163, 177, 138, 255], // salvia #A3B18A
+  fondo: [25, 40, 47, 255], // navy #19282F
+  casa: [61, 213, 152, 255], // menta #3DD598
+  puerta: [25, 40, 47, 255], // navy (puerta)
 }
 
 // CRC32 para los chunks PNG.

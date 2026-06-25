@@ -36,11 +36,11 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-bold
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-bold
       transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primario {
-    @apply btn bg-oliva text-crema-claro shadow-suave hover:bg-oliva-oscuro;
+    @apply btn bg-oliva text-crema-claro shadow-suave hover:opacity-90;
   }
   .btn-secundario {
     @apply btn bg-crema-oscuro text-bosque hover:bg-salvia-claro;
@@ -78,8 +78,115 @@
   }
 }
 
+/* Aparición de pestaña: SOLO opacidad (sin transform), para no romper el
+   position:fixed del botón flotante "+". */
+.tab-in {
+  animation: tabIn 0.2s ease;
+}
+@keyframes tabIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Scroll horizontal suave para el gráfico */
 .scroll-x {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+}
+
+/* ── Skeleton de carga (reserva espacio, evita el parpadeo de "vacío") ── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #2A3D47; /* crema-oscuro (dark) */
+  border-radius: 0.75rem;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Pop de puntos (+X pts) al completar una tarea ── */
+.pop-pts {
+  animation: popPts 0.9s ease forwards;
+}
+@keyframes popPts {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.8);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.1);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-14px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.95);
+  }
+}
+
+/* ── Salida de un ítem al completarlo (tarea hecha / producto comprado) ── */
+.salida-completado {
+  animation: salidaCompletado 0.45s ease forwards;
+}
+@keyframes salidaCompletado {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+/* ── Latido suave del valor de puntos al sumar ── */
+.late {
+  animation: late 0.5s ease;
+}
+@keyframes late {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+}
+
+/* Accesibilidad: respeta a quien prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .tab-in,
+  .pop-pts,
+  .salida-completado,
+  .late,
+  .skeleton::after {
+    animation: none;
+  }
+  .pop-pts {
+    opacity: 0;
+  }
 }

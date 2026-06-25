@@ -25,3 +25,31 @@ export const CATEGORIA_POR_NOMBRE = Object.fromEntries(
 export function infoCategoria(nombre) {
   return CATEGORIA_POR_NOMBRE[nombre] || CATEGORIA_POR_NOMBRE['Otros']
 }
+
+// ── Niveles gamificados (temática de jardín, acorde a la paleta terrenal) ──
+// `min` = puntos acumulados necesarios para alcanzar el nivel.
+export const NIVELES = [
+  { nombre: 'Semilla', emoji: '🌱', min: 0 },
+  { nombre: 'Brote', emoji: '🌿', min: 50 },
+  { nombre: 'Plántula', emoji: '🍀', min: 120 },
+  { nombre: 'Arbusto', emoji: '🪴', min: 250 },
+  { nombre: 'Árbol joven', emoji: '🌳', min: 450 },
+  { nombre: 'Roble', emoji: '🌲', min: 700 },
+  { nombre: 'Jardín', emoji: '🏡', min: 1000 },
+  { nombre: 'Bosque', emoji: '🌲🌲', min: 1500 },
+]
+
+// Devuelve el nivel actual, el siguiente y el progreso (0–1) hacia él.
+export function nivelDesdePuntos(puntos = 0) {
+  let idx = 0
+  for (let i = 0; i < NIVELES.length; i++) {
+    if (puntos >= NIVELES[i].min) idx = i
+  }
+  const actual = NIVELES[idx]
+  const siguiente = NIVELES[idx + 1] || null
+  const progreso = siguiente
+    ? (puntos - actual.min) / (siguiente.min - actual.min)
+    : 1
+  const faltan = siguiente ? siguiente.min - puntos : 0
+  return { idx, nivel: idx + 1, actual, siguiente, progreso, faltan }
+}

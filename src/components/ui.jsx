@@ -32,7 +32,7 @@ export function Modal({ abierto, onCerrar, titulo, children }) {
   if (!abierto) return null
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-bosque/40 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
       onClick={onCerrar}
     >
       <div
@@ -44,6 +44,28 @@ export function Modal({ abierto, onCerrar, titulo, children }) {
         {titulo && <h2 className="mb-4 text-xl font-bold text-bosque">{titulo}</h2>}
         {children}
       </div>
+    </div>
+  )
+}
+
+// Bloque de carga reutilizable. `className` define forma/tamaño (alto, ancho, radio).
+export function Skeleton({ className = 'h-4 w-full' }) {
+  return <div className={`skeleton ${className}`} aria-hidden="true" />
+}
+
+// Skeleton con forma de tarjeta, para listas mientras llegan los datos de Firestore.
+export function SkeletonTarjetas({ filas = 3 }) {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Cargando…">
+      {Array.from({ length: filas }).map((_, i) => (
+        <div key={i} className="tarjeta flex items-center gap-3">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-2/3 rounded-lg" />
+            <Skeleton className="h-3 w-1/3 rounded-lg" />
+          </div>
+          <Skeleton className="h-9 w-20 rounded-2xl" />
+        </div>
+      ))}
     </div>
   )
 }

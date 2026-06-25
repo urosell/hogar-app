@@ -60,13 +60,13 @@ export default function App() {
         </button>
       </header>
 
-      {/* Contenido */}
+      {/* Contenido — las tres pestañas se mantienen montadas y solo se
+          muestran/ocultan, para conservar datos y listeners entre cambios
+          de pestaña (evita el parpadeo de recarga). */}
       <main className="flex-1 px-4 pb-28">
-        <div key={tab} className="fade-in">
-          {tab === 'tareas' && <Tareas />}
-          {tab === 'compra' && <Compra />}
-          {tab === 'gym' && <Gym />}
-        </div>
+        <div className={tab === 'tareas' ? 'tab-in' : 'hidden'}><Tareas /></div>
+        <div className={tab === 'compra' ? 'tab-in' : 'hidden'}><Compra /></div>
+        <div className={tab === 'gym' ? 'tab-in' : 'hidden'}><Gym /></div>
       </main>
 
       <BottomNav activo={tab} onCambiar={setTab} />
@@ -76,7 +76,7 @@ export default function App() {
       {/* Banner de notificación en primer plano */}
       {aviso && (
         <div className="fixed inset-x-0 top-0 z-50 flex justify-center px-4" style={{ paddingTop: 'calc(0.5rem + var(--safe-top))' }}>
-          <div className="fade-in w-full max-w-md rounded-2xl bg-bosque px-4 py-3 text-crema-claro shadow-tarjeta">
+          <div className="fade-in w-full max-w-md rounded-2xl bg-oliva px-4 py-3 text-crema-claro shadow-tarjeta">
             <p className="font-bold">{aviso.titulo}</p>
             {aviso.cuerpo && <p className="text-sm opacity-90">{aviso.cuerpo}</p>}
           </div>

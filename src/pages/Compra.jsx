@@ -13,16 +13,21 @@ import {
 } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
 import { CATEGORIAS, infoCategoria } from '../data/constantes'
-import { Modal, Vacio, IconoMas, IconoFlecha, IconoPapelera } from '../components/ui'
+import { Modal, Vacio, IconoMas, IconoFlecha, IconoPapelera, SkeletonTarjetas } from '../components/ui'
 
 export default function Compra() {
   const { hogarId } = useApp()
   const [listas, setListas] = useState([])
+  const [cargado, setCargado] = useState(false)
   const [seleccionada, setSeleccionada] = useState(null)
 
   useEffect(() => {
     if (!hogarId) return
-    return escucharListas(hogarId, setListas)
+    setCargado(false)
+    return escucharListas(hogarId, (l) => {
+      setListas(l)
+      setCargado(true)
+    })
   }, [hogarId])
 
   // Mantiene la lista seleccionada en sync (o vuelve al selector si se borra).
@@ -35,10 +40,10 @@ export default function Compra() {
     return <ListaDetalle lista={listaActiva} onVolver={() => setSeleccionada(null)} />
   }
 
-  return <SelectorListas listas={listas} onAbrir={setSeleccionada} hogarId={hogarId} />
+  return <SelectorListas listas={listas} cargado={cargado} onAbrir={setSeleccionada} hogarId={hogarId} />
 }
 
-function SelectorListas({ listas, onAbrir, hogarId }) {
+function SelectorListas({ listas, cargado, onAbrir, hogarId }) {
   const { uid } = useApp()
   const [modal, setModal] = useState(false)
   const [nombre, setNombre] = useState('')
@@ -54,7 +59,9 @@ function SelectorListas({ listas, onAbrir, hogarId }) {
 
   return (
     <div className="space-y-3">
-      {listas.length === 0 ? (
+      {!cargado ? (
+        <SkeletonTarjetas filas={3} />
+      ) : listas.length === 0 ? (
         <Vacio emoji="🛒" titulo="No hay listas todavía" texto="Crea tu primera lista con el botón +" />
       ) : (
         listas.map((l) => (
@@ -105,18 +112,33 @@ function SelectorListas({ listas, onAbrir, hogarId }) {
 function ListaDetalle({ lista, onVolver }) {
   const { hogarId, uid, usuario, miembros } = useApp()
   const [items, setItems] = useState([])
+  const [cargado, setCargado] = useState(false)
   const [historial, setHistorial] = useState([])
   const [frecuentes, setFrecuentes] = useState([])
-  const [verHistorial, setVerHistorial] = useState(false)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
   const [filtroCat, setFiltroCat] = useState(null)
+  const [comprando, setComprando] = useState(() => new Set()) // ids marcándose
 
   useEffect(() => {
     if (!hogarId) return
-    const u1 = escucharItems(hogarId, lista.id, setItems)
+    setCargado(false)
+    const u1 = escucharItems(hogarId, lista.id, (its) => {
+      setItems(its)
+      setCargado(true)
+    })
     const u2 = escucharHistorial(hogarId, lista.id, setHistorial)
     const u3 = escucharFrecuentes(hogarId, setFrecuentes)
     return () => { u1(); u2(); u3() }
   }, [hogarId, lista.id])
+
+  // Anima el tachado antes de moverlo al historial (sensación de "comprado").
+  function handleComprar(item) {
+    setComprando((prev) => new Set(prev).add(item.id))
+    setTimeout(async () => {
+      await marcarComprado(hogarId, lista.id, item.id, true, uid)
+      setComprando((prev) => { const n = new Set(prev); n.delete(item.id); return n })
+    }, 400)
+  }
 
   const porUid = useMemo(() => Object.fromEntries(miembros.map((m) => [m.id, m])), [miembros])
 
@@ -170,41 +192,54 @@ function ListaDetalle({ lista, onVolver }) {
         </div>
       )}
 
-      {/* Pestañas pendiente / historial */}
-      <div className="flex gap-2">
-        <button onClick={() => setVerHistorial(false)} className={`flex-1 rounded-2xl py-2 text-sm font-bold ${!verHistorial ? 'bg-oliva text-crema-claro' : 'bg-crema-claro text-oliva-oscuro'}`}>
-          Por comprar ({items.length})
-        </button>
-        <button onClick={() => setVerHistorial(true)} className={`flex-1 rounded-2xl py-2 text-sm font-bold ${verHistorial ? 'bg-oliva text-crema-claro' : 'bg-crema-claro text-oliva-oscuro'}`}>
-          Historial ({historial.length})
-        </button>
-      </div>
-
-      {!verHistorial ? (
-        grupos.length === 0 ? (
+      {/* Por comprar (agrupado por categoría) */}
+      {!cargado ? (
+        <SkeletonTarjetas filas={3} />
+      ) : grupos.length === 0 ? (
+        items.length === 0 && historial.length === 0 ? (
           <Vacio emoji="✨" titulo="Lista vacía" texto="Añade productos arriba" />
         ) : (
-          grupos.map(({ categoria, items: its }) => {
-            const info = infoCategoria(categoria)
-            return (
-              <div key={categoria}>
-                <h3 className="mb-1.5 flex items-center gap-1.5 text-sm font-bold" style={{ color: info.color }}>
-                  <span>{info.emoji}</span> {categoria}
-                </h3>
-                <div className="space-y-2">
-                  {its.map((i) => (
-                    <ItemFila key={i.id} item={i} autor={porUid[i.anadidoPor]}
-                      onComprar={() => marcarComprado(hogarId, lista.id, i.id, true, uid)}
-                      onEliminar={() => eliminarItem(hogarId, lista.id, i.id)} />
-                  ))}
-                </div>
-              </div>
-            )
-          })
+          items.length === 0 && (
+            <Vacio emoji="🎉" titulo="¡Todo comprado!" texto="Lo de abajo está en el historial" />
+          )
         )
       ) : (
-        <HistorialLista historial={historial} porUid={porUid}
-          onDesmarcar={(i) => marcarComprado(hogarId, lista.id, i.id, false, uid)} />
+        grupos.map(({ categoria, items: its }) => {
+          const info = infoCategoria(categoria)
+          return (
+            <div key={categoria}>
+              <h3 className="mb-1.5 flex items-center gap-1.5 text-sm font-bold" style={{ color: info.color }}>
+                <span>{info.emoji}</span> {categoria}
+              </h3>
+              <div className="space-y-2">
+                {its.map((i) => (
+                  <ItemFila key={i.id} item={i} autor={porUid[i.anadidoPor]} saliendo={comprando.has(i.id)}
+                    onComprar={() => handleComprar(i)}
+                    onEliminar={() => eliminarItem(hogarId, lista.id, i.id)} />
+                ))}
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {/* Bucket de Historial al final de la lista (colapsable) */}
+      {historial.length > 0 && (
+        <div className="pt-2">
+          <button
+            onClick={() => setHistorialAbierto((v) => !v)}
+            className="flex w-full items-center justify-between rounded-2xl bg-crema-claro px-4 py-2.5 text-sm font-bold text-oliva-oscuro"
+          >
+            <span className="flex items-center gap-2">🧾 Historial · {historial.length}</span>
+            <IconoFlecha className={`h-5 w-5 transition-transform ${historialAbierto ? '-rotate-90' : 'rotate-90'}`} />
+          </button>
+          {historialAbierto && (
+            <div className="mt-2">
+              <HistorialLista historial={historial} porUid={porUid}
+                onDesmarcar={(i) => marcarComprado(hogarId, lista.id, i.id, false, uid)} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
@@ -237,7 +272,7 @@ function FormAnadir({ frecuentes, onAnadir }) {
         {CATEGORIAS.map((c) => (
           <button type="button" key={c.nombre} onClick={() => setCategoria(c.nombre)}
             className={`chip shrink-0 border transition-colors ${categoria === c.nombre ? 'text-crema-claro' : 'text-oliva-oscuro'}`}
-            style={categoria === c.nombre ? { backgroundColor: c.color, borderColor: c.color } : { borderColor: '#EAE3D2', backgroundColor: '#FAF7F0' }}>
+            style={categoria === c.nombre ? { backgroundColor: c.color, borderColor: c.color } : { borderColor: '#2A3D47', backgroundColor: '#22333C' }}>
             {c.emoji} {c.nombre}
           </button>
         ))}
@@ -260,15 +295,24 @@ function FormAnadir({ frecuentes, onAnadir }) {
   )
 }
 
-function ItemFila({ item, autor, onComprar, onEliminar }) {
+function ItemFila({ item, autor, onComprar, onEliminar, saliendo }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-crema-claro px-3 py-2.5 shadow-suave">
-      <button onClick={onComprar} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-salvia hover:bg-salvia-claro" aria-label="Marcar comprado" />
+    <div className={`flex items-center gap-3 rounded-2xl bg-crema-claro px-3 py-2.5 shadow-suave ${saliendo ? 'salida-completado' : ''}`}>
+      <button
+        onClick={onComprar}
+        disabled={saliendo}
+        className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-sm font-bold transition-colors ${
+          saliendo ? 'border-oliva bg-oliva text-crema-claro' : 'border-salvia hover:bg-salvia-claro'
+        }`}
+        aria-label="Marcar comprado"
+      >
+        {saliendo && '✓'}
+      </button>
       <div className="flex-1">
-        <p className="font-bold text-bosque">{item.nombre}</p>
+        <p className={`font-bold text-bosque transition-all ${saliendo ? 'text-bosque/50 line-through' : ''}`}>{item.nombre}</p>
         {autor && <p className="text-xs text-oliva-oscuro/60">{autor.icono} {autor.nombre}</p>}
       </div>
-      <button onClick={onEliminar} className="text-marron/50 hover:text-marron-oscuro" aria-label="Eliminar">
+      <button onClick={onEliminar} className="cursor-pointer text-marron/50 hover:text-marron-oscuro" aria-label="Eliminar">
         <IconoPapelera className="h-4 w-4" />
       </button>
     </div>
@@ -301,7 +345,7 @@ function FiltroChip({ activo, onClick, children, color }) {
   return (
     <button onClick={onClick}
       className={`chip shrink-0 border ${activo ? 'text-crema-claro' : 'text-oliva-oscuro'}`}
-      style={activo ? { backgroundColor: color || '#588157', borderColor: color || '#588157' } : { borderColor: '#EAE3D2', backgroundColor: '#FAF7F0' }}>
+      style={activo ? { backgroundColor: color || '#3DD598', borderColor: color || '#3DD598' } : { borderColor: '#2A3D47', backgroundColor: '#22333C' }}>
       {children}
     </button>
   )

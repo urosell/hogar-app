@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { escucharGymRango, alternarGym, claveFecha } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
-import { Vacio, IconoFlecha } from '../components/ui'
+import { Vacio, IconoFlecha, Skeleton } from '../components/ui'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
 } from 'recharts'
@@ -10,7 +10,7 @@ import {
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const MESES_LARGO = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-const COLORES = ['#588157', '#9C7A54'] // miembro 1, miembro 2
+const COLORES = ['#3DD598', '#FFC542'] // miembro 1 (menta), miembro 2 (oro)
 
 // Lunes de la semana de una fecha.
 function inicioSemana(d) {
@@ -24,6 +24,7 @@ function inicioSemana(d) {
 export default function Gym() {
   const { hogarId, uid, usuario, miembros } = useApp()
   const [gym, setGym] = useState({}) // mapa clave -> [uids] (rango amplio: 12 meses)
+  const [cargado, setCargado] = useState(false)
   const [mesVista, setMesVista] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
 
   // Asigna un color estable a cada miembro.
@@ -38,7 +39,11 @@ export default function Gym() {
     if (!hogarId) return
     const hoy = new Date()
     const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1)
-    return escucharGymRango(hogarId, claveFecha(desde), claveFecha(hoy), setGym)
+    setCargado(false)
+    return escucharGymRango(hogarId, claveFecha(desde), claveFecha(hoy), (g) => {
+      setGym(g)
+      setCargado(true)
+    })
   }, [hogarId])
 
   // También escuchamos el mes en vista por si es anterior al rango (navegación lejana).
@@ -104,6 +109,20 @@ export default function Gym() {
     return Object.values(map)
   }, [gym, miembros])
 
+  if (!cargado) {
+    return (
+      <div className="space-y-5" aria-busy="true" aria-label="Cargando…">
+        <Skeleton className="h-32 w-full rounded-xl2" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-24 w-full rounded-xl2" />
+          <Skeleton className="h-24 w-full rounded-xl2" />
+        </div>
+        <Skeleton className="h-72 w-full rounded-xl2" />
+        <Skeleton className="h-56 w-full rounded-xl2" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       {/* Hoy */}
@@ -115,7 +134,7 @@ export default function Gym() {
             const activo = asistentesHoy.includes(m.id)
             return (
               <button key={m.id} onClick={() => toggle(m.id)}
-                className={`flex flex-1 flex-col items-center gap-2 rounded-2xl py-4 transition-all active:scale-95 ${activo ? 'text-crema-claro shadow-tarjeta' : 'bg-crema-oscuro/60 text-oliva-oscuro'}`}
+                className={`flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-2xl py-4 transition-all active:scale-95 ${activo ? 'text-crema-claro shadow-tarjeta' : 'bg-crema-oscuro/60 text-oliva-oscuro'}`}
                 style={activo ? { backgroundColor: colorDe[m.id] } : {}}>
                 <span className="text-4xl">{m.icono}</span>
                 <span className="font-bold">{m.nombre}</span>
@@ -150,10 +169,10 @@ export default function Gym() {
             <div style={{ minWidth: Math.max(320, datosGrafico.length * 52) }}>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={datosGrafico} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EAE3D2" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#3A5A40' }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3A5A40' }} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #EAE3D2', fontSize: 13 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#33454F" vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#92A0AC' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#92A0AC' }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #2A3D47', backgroundColor: '#22333C', color: '#fff', fontSize: 13 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   {miembros.map((m) => (
                     <Bar key={m.id} dataKey={m.id} name={m.nombre} fill={colorDe[m.id]} radius={[4, 4, 0, 0]} maxBarSize={18} />
