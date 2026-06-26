@@ -8,10 +8,13 @@ import {
   completarTarea,
   eliminarTarea,
   asignarTarea,
+  actualizarTarea,
+  reactivarTarea,
 } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
 import { nivelDesdePuntos } from '../data/constantes'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
+import { useIdioma } from '../context/IdiomaContext'
 
 const DIA = 24 * 60 * 60 * 1000
 
@@ -23,12 +26,14 @@ function diasRestantes(proximaAparicion) {
 
 export default function Tareas({ seccion, setSeccion, onPendientes }) {
   const { hogarId, uid, usuario, miembros } = useApp()
+  const { t } = useIdioma()
   const [tareas, setTareas] = useState([])
   const [cargado, setCargado] = useState(false)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [confirmarDefinitiva, setConfirmarDefinitiva] = useState(null)
   const [confirmarEliminar, setConfirmarEliminar] = useState(null)
   const [detalleTarea, setDetalleTarea] = useState(null) // tarea con el popup de acciones abierto
+  const [editarTarea, setEditarTarea] = useState(null) // tarea en edición
 
   useEffect(() => {
     if (!hogarId) return
@@ -84,8 +89,8 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
     await completarTarea(hogarId, tarea, uid)
     emitirEvento(hogarId, {
       tipo: 'tareas',
-      titulo: '✅ Tarea completada',
-      cuerpo: `${usuario?.nombre || 'Alguien'} ha hecho «${tarea.nombre}» (+${tarea.puntos} pts)`,
+      titulo: t('notif.tareaHechaTitulo'),
+      cuerpo: t('notif.tareaHechaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: tarea.nombre, puntos: tarea.puntos }),
       deUid: uid,
     })
     setTimeout(() => setCompletando((id) => (id === tarea.id ? null : id)), 450)
@@ -97,12 +102,18 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
     await eliminarTarea(hogarId, tarea.id)
   }
 
+  async function handleReactivar(tarea) {
+    await reactivarTarea(hogarId, tarea)
+  }
+
   async function handleAsignar(tarea, asignadoA) {
     await asignarTarea(hogarId, tarea.id, asignadoA)
   }
 
   // El popup usa la versión "viva" de la tarea (se actualiza al asignar).
   const detalleVivo = detalleTarea ? tareas.find((t) => t.id === detalleTarea.id) : null
+  // ¿La tarea del popup está descansando? (para mostrar "Reactivar")
+  const detalleDescansa = detalleVivo?.proximaAparicion && detalleVivo.proximaAparicion.toMillis() > limite
 
   async function handleAprobar(tarea) {
     await aprobarTarea(hogarId, tarea.id, uid)
@@ -120,17 +131,17 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
           {!cargado ? (
             <SkeletonTarjetas filas={3} />
           ) : paraHacer.length === 0 && descansando.length === 0 ? (
-            <Vacio emoji="🧹" titulo="No hay tareas activas" texto="Crea una nueva con el botón +" />
+            <Vacio emoji="🧹" titulo={t('tareas.vacioActivasTitulo')} texto={t('tareas.vacioActivasTexto')} />
           ) : (
             <>
-              {paraHacer.map((t) => (
-                <TareaCard key={t.id} tarea={t} porUid={porUid} onCompletar={() => pedirCompletar(t)} onAbrir={() => setDetalleTarea(t)} saliendo={completando === t.id} />
+              {paraHacer.map((tar) => (
+                <TareaCard key={tar.id} tarea={tar} porUid={porUid} onCompletar={() => pedirCompletar(tar)} onAbrir={() => setDetalleTarea(tar)} saliendo={completando === tar.id} />
               ))}
               {descansando.length > 0 && (
                 <div className="pt-2">
-                  <h3 className="mb-2 text-sm font-bold text-oliva-oscuro">Descansando 💤</h3>
-                  {descansando.map((t) => (
-                    <TareaCard key={t.id} tarea={t} porUid={porUid} onAbrir={() => setDetalleTarea(t)} descansando />
+                  <h3 className="mb-2 text-sm font-bold text-oliva-oscuro">{t('tareas.descansando')}</h3>
+                  {descansando.map((tar) => (
+                    <TareaCard key={tar.id} tarea={tar} porUid={porUid} onAbrir={() => setDetalleTarea(tar)} descansando />
                   ))}
                 </div>
               )}
@@ -143,22 +154,22 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
         <>
           {solo && (
             <p className="rounded-xl bg-crema-claro px-3 py-2 text-xs text-oliva-oscuro">
-              Estás solo en el hogar: puedes aprobar tus propias tareas hasta que tu pareja se una.
+              {t('tareas.soloAviso')}
             </p>
           )}
           {!cargado ? (
             <SkeletonTarjetas filas={2} />
           ) : pendientes.length === 0 ? (
-            <Vacio emoji="📝" titulo="Nada pendiente de aprobar" />
+            <Vacio emoji="📝" titulo={t('tareas.vacioAprobar')} />
           ) : (
-            pendientes.map((t) => (
+            pendientes.map((tar) => (
               <TareaPendiente
-                key={t.id}
-                tarea={t}
-                esMia={t.creadaPor === uid && !solo}
-                creador={porUid[t.creadaPor]}
-                onAprobar={() => handleAprobar(t)}
-                onRechazar={() => handleRechazar(t)}
+                key={tar.id}
+                tarea={tar}
+                esMia={tar.creadaPor === uid && !solo}
+                creador={porUid[tar.creadaPor]}
+                onAprobar={() => handleAprobar(tar)}
+                onRechazar={() => handleRechazar(tar)}
               />
             ))
           )}
@@ -170,23 +181,34 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
         onClick={() => setModalAbierto(true)}
         className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
-        aria-label="Nueva tarea"
+        aria-label={t('tareas.nuevaTareaAria')}
       >
         <IconoMas className="h-7 w-7" />
       </button>
 
-      <CrearTareaModal
+      <TareaModal
         abierto={modalAbierto}
         onCerrar={() => setModalAbierto(false)}
-        onCrear={async (datos) => {
+        onGuardar={async (datos) => {
           await crearTarea(hogarId, datos, uid)
           emitirEvento(hogarId, {
             tipo: 'tareas',
-            titulo: '📝 Nueva tarea por aprobar',
-            cuerpo: `${usuario?.nombre || 'Alguien'} propone «${datos.nombre}»`,
+            titulo: t('notif.nuevaTareaTitulo'),
+            cuerpo: t('notif.nuevaTareaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: datos.nombre }),
             deUid: uid,
           })
           setModalAbierto(false)
+        }}
+      />
+
+      {/* Modal de edición de una tarea existente */}
+      <TareaModal
+        abierto={!!editarTarea}
+        tarea={editarTarea}
+        onCerrar={() => setEditarTarea(null)}
+        onGuardar={async (datos) => {
+          await actualizarTarea(hogarId, editarTarea.id, datos)
+          setEditarTarea(null)
         }}
       />
 
@@ -194,19 +216,17 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       <Modal
         abierto={!!confirmarDefinitiva}
         onCerrar={() => setConfirmarDefinitiva(null)}
-        titulo="¿Completar esta tarea?"
+        titulo={t('tareas.confirmCompletarTitulo')}
       >
         <p className="text-oliva-oscuro">
-          «{confirmarDefinitiva?.nombre}» es una tarea de una sola vez: al completarla
-          desaparecerá de forma permanente y sumarás{' '}
-          <span className="font-bold text-oliva">+{confirmarDefinitiva?.puntos} pts</span>.
+          {t('tareas.confirmCompletarTexto', { nombre: confirmarDefinitiva?.nombre, puntos: confirmarDefinitiva?.puntos })}
         </p>
         <div className="mt-4 flex gap-2">
           <button onClick={() => setConfirmarDefinitiva(null)} className="btn-secundario flex-1">
-            Cancelar
+            {t('common.cancelar')}
           </button>
           <button onClick={() => ejecutarCompletar(confirmarDefinitiva)} className="btn-primario flex-1">
-            ✓ Completar
+            {t('tareas.completar')}
           </button>
         </div>
       </Modal>
@@ -215,11 +235,21 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       <Modal
         abierto={!!detalleVivo}
         onCerrar={() => setDetalleTarea(null)}
-        titulo={detalleVivo?.nombre || 'Tarea'}
       >
         <div className="space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-xl font-bold text-bosque">{detalleVivo?.nombre}</h2>
+            {detalleDescansa && (
+              <button
+                onClick={() => { handleReactivar(detalleVivo); setDetalleTarea(null) }}
+                className="shrink-0 rounded-full border border-oliva px-2.5 py-1 text-xs font-bold text-oliva transition-transform active:scale-95"
+              >
+                {t('tareas.reactivar')}
+              </button>
+            )}
+          </div>
           <div>
-            <p className="etiqueta mb-2">Asignar a</p>
+            <p className="etiqueta mb-2">{t('tareas.asignarA')}</p>
             <div className="flex flex-wrap gap-2">
               {miembros.map((m) => {
                 const sel = detalleVivo?.asignadoA === m.id
@@ -243,20 +273,31 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
                   !detalleVivo?.asignadoA ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'
                 }`}
               >
-                Sin asignar
+                {t('tareas.sinAsignar')}
               </button>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              setConfirmarEliminar(detalleVivo)
-              setDetalleTarea(null)
-            }}
-            className="w-full rounded-full border border-marron py-3 font-bold text-marron transition-transform active:scale-95"
-          >
-            🗑️ Eliminar tarea
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditarTarea(detalleVivo)
+                setDetalleTarea(null)
+              }}
+              className="flex-1 rounded-full border border-oliva py-3 font-bold text-oliva transition-transform active:scale-95"
+            >
+              {t('tareas.editar')}
+            </button>
+            <button
+              onClick={() => {
+                setConfirmarEliminar(detalleVivo)
+                setDetalleTarea(null)
+              }}
+              className="flex-1 rounded-full border border-marron py-3 font-bold text-marron transition-transform active:scale-95"
+            >
+              {t('tareas.eliminar')}
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -264,21 +305,20 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       <Modal
         abierto={!!confirmarEliminar}
         onCerrar={() => setConfirmarEliminar(null)}
-        titulo="¿Eliminar esta tarea?"
+        titulo={t('tareas.confirmEliminarTitulo')}
       >
         <p className="text-oliva-oscuro">
-          «{confirmarEliminar?.nombre}» se eliminará para siempre del hogar.
-          Esta acción no se puede deshacer.
+          {t('tareas.confirmEliminarTexto', { nombre: confirmarEliminar?.nombre })}
         </p>
         <div className="mt-4 flex gap-2">
           <button onClick={() => setConfirmarEliminar(null)} className="btn-secundario flex-1">
-            Cancelar
+            {t('common.cancelar')}
           </button>
           <button
             onClick={() => handleEliminar(confirmarEliminar)}
             className="flex-1 rounded-full bg-marron py-3 font-bold text-crema-claro transition-transform active:scale-95"
           >
-            🗑️ Eliminar
+            {t('tareas.eliminar')}
           </button>
         </div>
       </Modal>
@@ -287,6 +327,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
 }
 
 function BarraPuntos({ miembros, uidActual, festejo }) {
+  const { t } = useIdioma()
   const ordenados = [...miembros].sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
   return (
     <div className="tarjeta flex items-stretch justify-around gap-2">
@@ -318,7 +359,7 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
             </p>
             <span
               className="rounded-full bg-crema-oscuro px-2.5 py-0.5 text-[11px] font-bold text-oliva-oscuro"
-              title={nivel.siguiente ? `Faltan ${nivel.faltan} pts para ${nivel.siguiente.nombre}` : '¡Nivel máximo!'}
+              title={nivel.siguiente ? t('tareas.faltanPts', { n: nivel.faltan, nivel: t('nivel.' + nivel.siguiente.nombre) }) : t('tareas.nivelMaximo')}
             >
               {nivel.actual.emoji} Nv.{nivel.nivel}
             </span>
@@ -336,7 +377,7 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
           <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-crema-oscuro text-2xl text-oliva-oscuro">
             ➕
           </div>
-          <p className="text-xs font-bold text-oliva-oscuro">Esperando…</p>
+          <p className="text-xs font-bold text-oliva-oscuro">{t('tareas.esperando')}</p>
         </div>
       )}
     </div>
@@ -344,15 +385,16 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
 }
 
 function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo }) {
+  const { t } = useIdioma()
   const ultimo = porUid[tarea.ultimoCompletadoPor]
   const asignado = tarea.asignadoA ? porUid[tarea.asignadoA] : null
   return (
     <div className={`tarjeta mb-3 flex items-center gap-3 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}>
-      <button onClick={onAbrir} className="flex-1 cursor-pointer text-left" aria-label="Opciones de la tarea">
+      <button onClick={onAbrir} className="flex-1 cursor-pointer text-left" aria-label={t('tareas.opcionesAria')}>
         <div className="flex items-center gap-2">
           <p className="font-bold text-bosque">{tarea.nombre}</p>
           {asignado && (
-            <span className="chip bg-oliva/15 text-oliva" title={`Asignada a ${asignado.nombre}`}>
+            <span className="chip bg-oliva/15 text-oliva" title={t('tareas.asignadaA', { nombre: asignado.nombre })}>
               {asignado.icono || '🙂'} {asignado.nombre}
             </span>
           )}
@@ -360,20 +402,20 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
           <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
           {tarea.periodicidadDias != null ? (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">cada {tarea.periodicidadDias}d</span>
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDias', { n: tarea.periodicidadDias })}</span>
           ) : (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">una vez</span>
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.unaVez')}</span>
           )}
           {descansando ? (
-            <span className="font-bold text-marron">vuelve en {diasRestantes(tarea.proximaAparicion)}d</span>
+            <span className="font-bold text-marron">{t('tareas.vuelveEn', { n: diasRestantes(tarea.proximaAparicion) })}</span>
           ) : (
-            ultimo && <span>última vez: {ultimo.icono} {ultimo.nombre}</span>
+            ultimo && <span>{t('tareas.ultimaVez')} {ultimo.icono} {ultimo.nombre}</span>
           )}
         </div>
       </button>
       {!descansando && (
         <button onClick={onCompletar} disabled={saliendo} className="btn-primario shrink-0 cursor-pointer px-4 py-2.5 text-sm">
-          ✓ Hecha
+          {t('tareas.hecha')}
         </button>
       )}
     </div>
@@ -381,6 +423,7 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
 }
 
 function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
+  const { t } = useIdioma()
   return (
     <div className="tarjeta mb-3">
       <div className="flex items-center justify-between">
@@ -388,23 +431,23 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
         <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
       </div>
       <p className="mt-1.5 text-xs text-oliva-oscuro">
-        {tarea.periodicidadDias != null ? `Recurrente cada ${tarea.periodicidadDias} días` : 'Una sola vez'}
-        {creador && ` · propuesta por ${creador.icono} ${creador.nombre}`}
+        {tarea.periodicidadDias != null ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias }) : t('tareas.unaSolaVez')}
+        {creador && ` · ${t('tareas.propuestaPor', { icono: creador.icono, nombre: creador.nombre })}`}
       </p>
       {esMia ? (
         <p className="mt-3 rounded-xl bg-crema-oscuro px-3 py-2 text-center text-sm font-bold text-oliva-oscuro">
-          ⏳ Esperando aprobación de tu pareja
+          {t('tareas.esperandoAprobacion')}
         </p>
       ) : (
         <div className="mt-3 flex gap-2">
           <button onClick={onAprobar} className="btn-primario flex-1 py-2.5 text-sm">
-            ✓ Aprobar
+            {t('tareas.aprobar')}
           </button>
           <button
             onClick={onRechazar}
             className="flex-1 rounded-full border border-marron py-2.5 text-sm font-bold text-marron transition-transform active:scale-95"
           >
-            ✕ Rechazar
+            {t('tareas.rechazar')}
           </button>
         </div>
       )}
@@ -412,71 +455,84 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
   )
 }
 
-function CrearTareaModal({ abierto, onCerrar, onCrear }) {
+// Modal para crear una tarea nueva o editar una existente (si recibe `tarea`).
+function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
+  const { t } = useIdioma()
+  const editando = !!tarea
   const [nombre, setNombre] = useState('')
   const [puntos, setPuntos] = useState(10)
   const [recurrente, setRecurrente] = useState(false)
   const [dias, setDias] = useState(7)
   const [enviando, setEnviando] = useState(false)
 
-  function reset() {
-    setNombre(''); setPuntos(10); setRecurrente(false); setDias(7)
-  }
+  // Al abrir, precarga los valores de la tarea (edición) o los por defecto (nueva).
+  useEffect(() => {
+    if (!abierto) return
+    if (tarea) {
+      setNombre(tarea.nombre || '')
+      setPuntos(tarea.puntos || 10)
+      setRecurrente(tarea.periodicidadDias != null)
+      setDias(tarea.periodicidadDias ?? 7)
+    } else {
+      setNombre(''); setPuntos(10); setRecurrente(false); setDias(7)
+    }
+  }, [abierto, tarea])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!nombre.trim()) return
     setEnviando(true)
     try {
-      await onCrear({
+      await onGuardar({
         nombre: nombre.trim(),
         puntos: Number(puntos) || 0,
         periodicidadDias: recurrente ? Number(dias) || 1 : null,
       })
-      reset()
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} titulo="Nueva tarea">
+    <Modal abierto={abierto} onCerrar={onCerrar} titulo={editando ? t('tareas.editarTarea') : t('tareas.nuevaTareaTitulo')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="etiqueta">Nombre de la tarea</label>
-          <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sacar la basura" className="input" maxLength={50} />
+          <label className="etiqueta">{t('tareas.nombreLabel')}</label>
+          <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder={t('tareas.nombrePlaceholder')} className="input" maxLength={50} />
         </div>
 
         <div>
-          <label className="etiqueta">Puntos: {puntos}</label>
+          <label className="etiqueta">{t('tareas.puntosLabel', { n: puntos })}</label>
           <input type="range" min="1" max="100" value={puntos} onChange={(e) => setPuntos(e.target.value)} className="w-full accent-oliva" />
         </div>
 
         <div>
-          <label className="etiqueta">Periodicidad</label>
+          <label className="etiqueta">{t('tareas.periodicidad')}</label>
           <div className="flex gap-2">
             <button type="button" onClick={() => setRecurrente(false)} className={`flex-1 rounded-2xl py-3 text-sm font-bold ${!recurrente ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
-              Una vez
+              {t('tareas.unaVezBtn')}
             </button>
             <button type="button" onClick={() => setRecurrente(true)} className={`flex-1 rounded-2xl py-3 text-sm font-bold ${recurrente ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
-              Recurrente
+              {t('tareas.recurrente')}
             </button>
           </div>
         </div>
 
         {recurrente && (
           <div>
-            <label className="etiqueta">Repetir cada (días)</label>
+            <label className="etiqueta">{t('tareas.repetirCada')}</label>
             <input type="number" min="1" max="365" value={dias} onChange={(e) => setDias(e.target.value)} className="input" />
           </div>
         )}
 
-        <p className="rounded-xl bg-crema-oscuro/60 px-3 py-2 text-xs text-oliva-oscuro/80">
-          La tarea quedará pendiente hasta que tu pareja la apruebe.
-        </p>
+        {!editando && (
+          <p className="rounded-xl bg-crema-oscuro/60 px-3 py-2 text-xs text-oliva-oscuro/80">
+            {t('tareas.notaAprobacion')}
+          </p>
+        )}
 
         <button type="submit" disabled={enviando || !nombre.trim()} className="btn-primario w-full py-3.5">
-          {enviando ? 'Creando…' : 'Proponer tarea'}
+          {enviando ? t('tareas.guardando') : editando ? t('tareas.guardarCambios') : t('tareas.proponerTarea')}
         </button>
       </form>
     </Modal>

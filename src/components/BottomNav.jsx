@@ -1,10 +1,11 @@
 import { IconoCasa, IconoCompra, IconoGym } from './ui'
+import { useIdioma } from '../context/IdiomaContext'
 
 // Tareas (casa) va primera y un poco más grande que el resto.
 const TABS = [
-  { id: 'tareas', label: 'Tareas', Icono: IconoCasa, grande: true },
-  { id: 'compra', label: 'Compra', Icono: IconoCompra },
-  { id: 'gym', label: 'Gym', Icono: IconoGym },
+  { id: 'tareas', clave: 'nav.tareas', Icono: IconoCasa, grande: true },
+  { id: 'compra', clave: 'nav.compra', Icono: IconoCompra },
+  { id: 'gym', clave: 'nav.gym', Icono: IconoGym },
 ]
 
 // Colores tomados del diseño assets/3_Elements_Circled_Navigation.svg
@@ -13,6 +14,7 @@ const ACTIVO = '#3DD598' // círculo verde menta del tab seleccionado
 const INACTIVO = '#96A7AF' // iconos grises de los tabs no seleccionados
 
 export default function BottomNav({ activo, onCambiar }) {
+  const { t } = useIdioma()
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30"
@@ -22,13 +24,13 @@ export default function BottomNav({ activo, onCambiar }) {
         className="mx-auto flex max-w-md items-center justify-around rounded-t-[25px] px-4 py-1.5 shadow-[0_-1px_14px_rgba(25,40,47,0.5)]"
         style={{ backgroundColor: BARRA }}
       >
-        {TABS.map(({ id, label, Icono, grande }) => {
+        {TABS.map(({ id, clave, Icono, grande }) => {
           const esActivo = activo === id
           return (
             <button
               key={id}
               onClick={() => onCambiar(id)}
-              aria-label={label}
+              aria-label={t(clave)}
               aria-current={esActivo ? 'page' : undefined}
               className="flex flex-1 items-center justify-center"
             >

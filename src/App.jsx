@@ -4,6 +4,7 @@ import { firebaseConfigurado } from './firebase/config'
 import { escucharMensajesPrimerPlano } from './firebase/messaging'
 import { Cargando, IconoAjustes, IconoSol, IconoLuna, IconoCampana } from './components/ui'
 import { useTheme } from './context/ThemeContext'
+import { useIdioma } from './context/IdiomaContext'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
 import OnboardingHogar from './pages/OnboardingHogar'
@@ -14,11 +15,11 @@ import Gym from './pages/Gym'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
-const TITULOS = { tareas: 'Tareas de casa', compra: 'Lista de la compra', gym: 'Gym' }
-
 export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario } = useApp()
   const { theme, toggle } = useTheme()
+  const { t } = useIdioma()
+  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), gym: t('titulo.gym') }
   const [tab, setTab] = useState('tareas')
   const [dir, setDir] = useState('der') // dirección del slide entre pestañas
   const [seccionTareas, setSeccionTareas] = useState('activas') // 'activas' | 'aprobar'
@@ -52,7 +53,7 @@ export default function App() {
   }, [aviso])
 
   if (!firebaseConfigurado) return <AvisoConfig />
-  if (cargando) return <Cargando texto="Entrando…" />
+  if (cargando) return <Cargando texto={t('app.entrando')} />
   if (!authUser) return <Login />
   if (!tieneHogar) return <OnboardingHogar />
   if (!perfilCompleto) return <OnboardingPerfil />
@@ -81,7 +82,7 @@ export default function App() {
                 ? 'bg-oliva text-crema-claro'
                 : 'text-oliva-oscuro hover:bg-crema-oscuro'
             }`}
-            aria-label="Tareas por aprobar"
+            aria-label={t('aria.porAprobar')}
           >
             <IconoCampana />
             {pendientesAprobar > 0 && (
@@ -93,14 +94,14 @@ export default function App() {
           <button
             onClick={toggle}
             className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
-            aria-label={theme === 'day' ? 'Cambiar a modo noche' : 'Cambiar a modo día'}
+            aria-label={theme === 'day' ? t('aria.modoNoche') : t('aria.modoDia')}
           >
             {theme === 'day' ? <IconoLuna /> : <IconoSol />}
           </button>
           <button
             onClick={() => setAjustesAbierto(true)}
             className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
-            aria-label="Ajustes"
+            aria-label={t('aria.ajustes')}
           >
             <IconoAjustes />
           </button>

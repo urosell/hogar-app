@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { crearHogar, unirseAHogar, salir } from '../firebase/firebaseService'
+import { useIdioma } from '../context/IdiomaContext'
 
 export default function OnboardingHogar() {
   const { uid } = useApp()
+  const { t } = useIdioma()
   const [modo, setModo] = useState(null) // null | 'crear' | 'unirse'
   const [codigoCreado, setCodigoCreado] = useState(null)
   const [codigoInput, setCodigoInput] = useState('')
@@ -18,7 +20,7 @@ export default function OnboardingHogar() {
       setCodigoCreado(codigo)
       // El AppContext detectará el hogarId y avanzará al perfil automáticamente.
     } catch {
-      setError('No se pudo crear el hogar.')
+      setError(t('oh.errCrear'))
     } finally {
       setCargando(false)
     }
@@ -31,7 +33,12 @@ export default function OnboardingHogar() {
     try {
       await unirseAHogar(uid, codigoInput)
     } catch (err) {
-      setError(err.message || 'No se pudo unir al hogar.')
+      const code = err?.message
+      setError(
+        code === 'hogar/no-existe' ? t('oh.errNoExiste')
+        : code === 'hogar/lleno' ? t('oh.errLleno')
+        : t('oh.errUnir')
+      )
     } finally {
       setCargando(false)
     }
@@ -41,26 +48,26 @@ export default function OnboardingHogar() {
     <div className="mx-auto flex min-h-full max-w-md flex-col p-6" style={{ paddingTop: 'calc(2rem + var(--safe-top))' }}>
       <div className="mb-8 text-center">
         <span className="text-5xl">🏡</span>
-        <h1 className="mt-2 text-3xl font-bold text-bosque">Tu hogar</h1>
-        <p className="text-oliva-oscuro">Crea uno nuevo o únete con un código.</p>
+        <h1 className="mt-2 text-3xl font-bold text-bosque">{t('oh.titulo')}</h1>
+        <p className="text-oliva-oscuro">{t('oh.subtitulo')}</p>
       </div>
 
       {/* Código recién creado */}
       {codigoCreado && (
         <div className="tarjeta mb-6 text-center">
-          <p className="text-sm font-bold text-oliva-oscuro">Comparte este código con tu pareja:</p>
+          <p className="text-sm font-bold text-oliva-oscuro">{t('oh.comparte')}</p>
           <p className="my-2 select-all text-4xl font-bold tracking-widest text-oliva">{codigoCreado}</p>
-          <p className="text-xs text-oliva-oscuro/70">Preparando tu perfil…</p>
+          <p className="text-xs text-oliva-oscuro/70">{t('oh.preparando')}</p>
         </div>
       )}
 
       {!codigoCreado && !modo && (
         <div className="flex flex-col gap-3">
           <button onClick={handleCrear} disabled={cargando} className="btn-primario py-4 text-lg">
-            ✨ Crear un hogar nuevo
+            {t('oh.crear')}
           </button>
           <button onClick={() => setModo('unirse')} className="btn-secundario py-4 text-lg">
-            🔗 Unirme con un código
+            {t('oh.unirme')}
           </button>
         </div>
       )}
@@ -68,7 +75,7 @@ export default function OnboardingHogar() {
       {!codigoCreado && modo === 'unirse' && (
         <form onSubmit={handleUnirse} className="flex flex-col gap-3">
           <div>
-            <label className="etiqueta">Código de invitación</label>
+            <label className="etiqueta">{t('oh.codigoLabel')}</label>
             <input
               autoFocus
               value={codigoInput}
@@ -79,10 +86,10 @@ export default function OnboardingHogar() {
             />
           </div>
           <button type="submit" disabled={cargando || codigoInput.length < 4} className="btn-primario py-4 text-lg">
-            {cargando ? 'Uniéndome…' : 'Unirme al hogar'}
+            {cargando ? t('oh.uniendome') : t('oh.unirmeHogar')}
           </button>
           <button type="button" onClick={() => { setModo(null); setError(null) }} className="btn-fantasma">
-            ← Volver
+            {t('oh.volver')}
           </button>
         </form>
       )}
@@ -90,7 +97,7 @@ export default function OnboardingHogar() {
       {error && <p className="mt-4 text-center text-sm font-bold text-marron-oscuro">{error}</p>}
 
       <button onClick={() => salir()} className="btn-fantasma mt-auto text-sm text-oliva-oscuro/60">
-        Cerrar sesión
+        {t('common.cerrarSesion')}
       </button>
     </div>
   )

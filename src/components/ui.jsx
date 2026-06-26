@@ -1,10 +1,12 @@
 // Componentes de UI reutilizables y pequeños iconos SVG.
+import { useIdioma } from '../context/IdiomaContext'
 
-export function Cargando({ texto = 'Cargando…' }) {
+export function Cargando({ texto }) {
+  const { t } = useIdioma()
   return (
     <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3 text-oliva-oscuro">
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-salvia/40 border-t-oliva" />
-      <p className="font-bold">{texto}</p>
+      <p className="font-bold">{texto || t('common.cargando')}</p>
     </div>
   )
 }
@@ -55,8 +57,9 @@ export function Skeleton({ className = 'h-4 w-full' }) {
 
 // Skeleton con forma de tarjeta, para listas mientras llegan los datos de Firestore.
 export function SkeletonTarjetas({ filas = 3 }) {
+  const { t } = useIdioma()
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Cargando…">
+    <div className="space-y-3" aria-busy="true" aria-label={t('common.cargando')}>
       {Array.from({ length: filas }).map((_, i) => (
         <div key={i} className="tarjeta flex items-center gap-3">
           <div className="flex-1 space-y-2">

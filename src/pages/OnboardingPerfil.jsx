@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { guardarPerfil, salir } from '../firebase/firebaseService'
 import { AVATARES } from '../data/constantes'
+import { useIdioma } from '../context/IdiomaContext'
 
 export default function OnboardingPerfil() {
   const { uid, hogar } = useApp()
+  const { t } = useIdioma()
   const [nombre, setNombre] = useState('')
   const [icono, setIcono] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -23,30 +25,30 @@ export default function OnboardingPerfil() {
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col p-6" style={{ paddingTop: 'calc(2rem + var(--safe-top))' }}>
       <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-bosque">Tu perfil</h1>
-        <p className="text-oliva-oscuro">Así te verá la otra persona del hogar.</p>
+        <h1 className="text-3xl font-bold text-bosque">{t('op.titulo')}</h1>
+        <p className="text-oliva-oscuro">{t('op.subtitulo')}</p>
         {hogar?.codigo && (
           <p className="mt-1 text-xs text-oliva-oscuro/60">
-            Hogar <span className="font-bold tracking-widest">{hogar.codigo}</span>
+            {t('op.hogar')} <span className="font-bold tracking-widest">{hogar.codigo}</span>
           </p>
         )}
       </div>
 
       <form onSubmit={handleGuardar} className="flex flex-col gap-5">
         <div>
-          <label className="etiqueta">¿Cómo te llamas?</label>
+          <label className="etiqueta">{t('op.comoTeLlamas')}</label>
           <input
             autoFocus
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Tu nombre"
+            placeholder={t('op.tuNombre')}
             maxLength={20}
             className="input"
           />
         </div>
 
         <div>
-          <label className="etiqueta">Elige tu avatar</label>
+          <label className="etiqueta">{t('op.eligeAvatar')}</label>
           <div className="grid grid-cols-6 gap-2">
             {AVATARES.map((a) => (
               <button
@@ -64,12 +66,12 @@ export default function OnboardingPerfil() {
         </div>
 
         <button type="submit" disabled={cargando || !nombre.trim() || !icono} className="btn-primario py-4 text-lg">
-          {cargando ? 'Guardando…' : '¡Listo!'}
+          {cargando ? t('op.guardando') : t('op.listo')}
         </button>
       </form>
 
       <button onClick={() => salir()} className="btn-fantasma mt-auto text-sm text-oliva-oscuro/60">
-        Cerrar sesión
+        {t('common.cerrarSesion')}
       </button>
     </div>
   )

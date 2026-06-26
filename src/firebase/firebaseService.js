@@ -28,6 +28,7 @@ import {
   arrayUnion,
   arrayRemove,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore'
 import { auth, db, googleProvider } from './config'
 
@@ -137,12 +138,13 @@ export async function unirseAHogar(uid, codigo) {
   const limpio = (codigo || '').trim().toUpperCase()
   const q = query(collection(db, 'hogares'), where('codigo', '==', limpio))
   const snap = await getDocs(q)
-  if (snap.empty) throw new Error('No existe ningún hogar con ese código.')
+  // Mensajes como códigos; la traducción se hace en la capa de UI.
+  if (snap.empty) throw new Error('hogar/no-existe')
 
   const hogar = snap.docs[0]
   const miembros = hogar.data().miembros || []
   if (!miembros.includes(uid) && miembros.length >= 2) {
-    throw new Error('Este hogar ya tiene dos miembros.')
+    throw new Error('hogar/lleno')
   }
   await updateDoc(doc(db, 'hogares', hogar.id), { miembros: arrayUnion(uid) })
   await updateDoc(refUsuario(uid), { hogarId: hogar.id })
@@ -211,10 +213,37 @@ export async function eliminarTarea(hogarId, tareaId) {
   await deleteDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId))
 }
 
+// Reactiva una tarea recurrente que estaba "descansando" (marcada por error):
+// vuelve a estar disponible ahora mismo y se deshace la última suma de puntos
+// (con tope en 0 para no dejar puntos negativos).
+export async function reactivarTarea(hogarId, tarea) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tarea.id), {
+    proximaAparicion: null,
+    ultimoCompletadoPor: null,
+    ultimoCompletadoFecha: null,
+  })
+  const quien = tarea.ultimoCompletadoPor
+  const puntos = Number(tarea.puntos) || 0
+  if (quien && puntos > 0) {
+    const snap = await getDoc(refUsuario(quien))
+    const actual = snap.exists() ? snap.data().puntos || 0 : 0
+    await updateDoc(refUsuario(quien), { puntos: Math.max(0, actual - puntos) })
+  }
+}
+
 // Asigna la tarea a un miembro (uid) o la deja sin asignar (null).
 export async function asignarTarea(hogarId, tareaId, asignadoA) {
   await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
     asignadoA: asignadoA ?? null,
+  })
+}
+
+// Edita los datos base de una tarea (nombre, puntos, periodicidad).
+export async function actualizarTarea(hogarId, tareaId, { nombre, puntos, periodicidadDias }) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
+    nombre: nombre.trim(),
+    puntos: Number(puntos) || 0,
+    periodicidadDias: periodicidadDias ?? null,
   })
 }
 
@@ -318,6 +347,18 @@ export async function marcarComprado(hogarId, listaId, itemId, comprado, uid) {
 
 export async function eliminarItem(hogarId, listaId, itemId) {
   await deleteDoc(doc(db, 'hogares', hogarId, 'listas', listaId, 'items', itemId))
+}
+
+// Devuelve TODO el historial a la lista (deshace todos los comprados de golpe).
+export async function deshacerHistorial(hogarId, listaId) {
+  const q = query(itemsCol(hogarId, listaId), where('comprado', '==', true))
+  const snap = await getDocs(q)
+  if (snap.empty) return
+  const batch = writeBatch(db)
+  snap.docs.forEach((d) =>
+    batch.update(d.ref, { comprado: false, compradoPor: null, compradoEn: null })
+  )
+  await batch.commit()
 }
 
 // ─────────────────────────── Productos frecuentes ────────────────────────

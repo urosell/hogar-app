@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { entrarConGoogle } from '../firebase/firebaseService'
+import { useIdioma } from '../context/IdiomaContext'
 
 export default function Login() {
+  const { t } = useIdioma()
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
 
@@ -12,7 +14,7 @@ export default function Login() {
       await entrarConGoogle()
     } catch (e) {
       if (e?.code !== 'auth/popup-closed-by-user') {
-        setError('No se pudo iniciar sesión. Inténtalo de nuevo.')
+        setError(t('login.error'))
       }
     } finally {
       setCargando(false)
@@ -28,22 +30,22 @@ export default function Login() {
         <div>
           <h1 className="text-4xl font-bold text-bosque">Hogar</h1>
           <p className="mt-1 text-oliva-oscuro">
-            Tareas, compra y gym.
+            {t('login.subtitulo1')}
             <br />
-            Vuestra casa, en orden y a dos.
+            {t('login.subtitulo2')}
           </p>
         </div>
       </div>
 
       <button onClick={handleLogin} disabled={cargando} className="btn w-full max-w-xs bg-crema-claro text-bosque shadow-tarjeta hover:bg-crema-oscuro">
         <GoogleIcon />
-        {cargando ? 'Entrando…' : 'Entrar con Google'}
+        {cargando ? t('login.entrando') : t('login.entrar')}
       </button>
 
       {error && <p className="text-sm font-bold text-marron-oscuro">{error}</p>}
 
       <p className="text-xs text-oliva-oscuro/60">
-        Al entrar creas o te unes a un hogar compartido.
+        {t('login.pie')}
       </p>
     </div>
   )
