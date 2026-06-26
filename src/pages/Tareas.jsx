@@ -6,6 +6,8 @@ import {
   aprobarTarea,
   rechazarTarea,
   completarTarea,
+  eliminarTarea,
+  asignarTarea,
 } from '../firebase/firebaseService'
 import { emitirEvento } from '../firebase/notificaciones'
 import { nivelDesdePuntos } from '../data/constantes'
@@ -19,13 +21,14 @@ function diasRestantes(proximaAparicion) {
   return Math.max(0, Math.ceil(ms / DIA))
 }
 
-export default function Tareas() {
+export default function Tareas({ seccion, setSeccion, onPendientes }) {
   const { hogarId, uid, usuario, miembros } = useApp()
   const [tareas, setTareas] = useState([])
   const [cargado, setCargado] = useState(false)
-  const [seccion, setSeccion] = useState('activas') // 'activas' | 'aprobar'
   const [modalAbierto, setModalAbierto] = useState(false)
   const [confirmarDefinitiva, setConfirmarDefinitiva] = useState(null)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(null)
+  const [detalleTarea, setDetalleTarea] = useState(null) // tarea con el popup de acciones abierto
 
   useEffect(() => {
     if (!hogarId) return
@@ -41,17 +44,27 @@ export default function Tareas() {
     [miembros]
   )
 
-  const ahora = Date.now()
+  // Umbral = final del día de HOY. Una tarea está activa si su reaparición
+  // cae hoy o antes, sin importar la hora guardada (recurrencia por días).
+  // También normaliza tareas viejas guardadas con el método antiguo (por horas).
+  const finDeHoy = new Date()
+  finDeHoy.setHours(23, 59, 59, 999)
+  const limite = finDeHoy.getTime()
   const paraHacer = tareas
-    .filter((t) => t.estado === 'activa' && (!t.proximaAparicion || t.proximaAparicion.toMillis() <= ahora))
+    .filter((t) => t.estado === 'activa' && (!t.proximaAparicion || t.proximaAparicion.toMillis() <= limite))
     .sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
   const descansando = tareas
-    .filter((t) => t.estado === 'activa' && t.proximaAparicion && t.proximaAparicion.toMillis() > ahora)
+    .filter((t) => t.estado === 'activa' && t.proximaAparicion && t.proximaAparicion.toMillis() > limite)
     .sort((a, b) => a.proximaAparicion.toMillis() - b.proximaAparicion.toMillis())
   const pendientes = tareas.filter((t) => t.estado === 'pendiente_aprobacion')
   // Sin pareja en el hogar no hay quien apruebe: te dejamos aprobar las tuyas.
   const solo = miembros.length < 2
   const porAprobarYo = solo ? pendientes : pendientes.filter((t) => t.creadaPor !== uid)
+
+  // Reporta a App el nº de tareas por aprobar (la campana vive en la cabecera).
+  useEffect(() => {
+    onPendientes?.(porAprobarYo.length)
+  }, [porAprobarYo.length, onPendientes])
 
   const [completando, setCompletando] = useState(null) // id de la tarea en transición
   const [festejo, setFestejo] = useState(null) // pop de "+X pts"
@@ -79,6 +92,18 @@ export default function Tareas() {
     setTimeout(() => setFestejo(null), 900)
   }
 
+  async function handleEliminar(tarea) {
+    setConfirmarEliminar(null)
+    await eliminarTarea(hogarId, tarea.id)
+  }
+
+  async function handleAsignar(tarea, asignadoA) {
+    await asignarTarea(hogarId, tarea.id, asignadoA)
+  }
+
+  // El popup usa la versión "viva" de la tarea (se actualiza al asignar).
+  const detalleVivo = detalleTarea ? tareas.find((t) => t.id === detalleTarea.id) : null
+
   async function handleAprobar(tarea) {
     await aprobarTarea(hogarId, tarea.id, uid)
   }
@@ -90,16 +115,6 @@ export default function Tareas() {
     <div className="space-y-4">
       <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
 
-      {/* Selector de sección (segmented control) */}
-      <div className="flex gap-1 rounded-full bg-crema-claro p-1 shadow-suave">
-        <BotonSeccion activo={seccion === 'activas'} onClick={() => setSeccion('activas')}>
-          Activas
-        </BotonSeccion>
-        <BotonSeccion activo={seccion === 'aprobar'} onClick={() => setSeccion('aprobar')} badge={porAprobarYo.length}>
-          Por aprobar
-        </BotonSeccion>
-      </div>
-
       {seccion === 'activas' && (
         <>
           {!cargado ? (
@@ -109,13 +124,13 @@ export default function Tareas() {
           ) : (
             <>
               {paraHacer.map((t) => (
-                <TareaCard key={t.id} tarea={t} porUid={porUid} onCompletar={() => pedirCompletar(t)} saliendo={completando === t.id} />
+                <TareaCard key={t.id} tarea={t} porUid={porUid} onCompletar={() => pedirCompletar(t)} onAbrir={() => setDetalleTarea(t)} saliendo={completando === t.id} />
               ))}
               {descansando.length > 0 && (
                 <div className="pt-2">
                   <h3 className="mb-2 text-sm font-bold text-oliva-oscuro">Descansando 💤</h3>
                   {descansando.map((t) => (
-                    <TareaCard key={t.id} tarea={t} porUid={porUid} descansando />
+                    <TareaCard key={t.id} tarea={t} porUid={porUid} onAbrir={() => setDetalleTarea(t)} descansando />
                   ))}
                 </div>
               )}
@@ -195,6 +210,78 @@ export default function Tareas() {
           </button>
         </div>
       </Modal>
+
+      {/* Popup de acciones de una tarea: asignar / eliminar */}
+      <Modal
+        abierto={!!detalleVivo}
+        onCerrar={() => setDetalleTarea(null)}
+        titulo={detalleVivo?.nombre || 'Tarea'}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="etiqueta mb-2">Asignar a</p>
+            <div className="flex flex-wrap gap-2">
+              {miembros.map((m) => {
+                const sel = detalleVivo?.asignadoA === m.id
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleAsignar(detalleVivo, sel ? null : m.id)}
+                    className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold transition-colors ${
+                      sel ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'
+                    }`}
+                  >
+                    <span className="text-lg">{m.icono || '🙂'}</span>
+                    {m.nombre || '—'}
+                    {sel && <span>✓</span>}
+                  </button>
+                )
+              })}
+              <button
+                onClick={() => handleAsignar(detalleVivo, null)}
+                className={`rounded-full px-3 py-2 text-sm font-bold transition-colors ${
+                  !detalleVivo?.asignadoA ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'
+                }`}
+              >
+                Sin asignar
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setConfirmarEliminar(detalleVivo)
+              setDetalleTarea(null)
+            }}
+            className="w-full rounded-full border border-marron py-3 font-bold text-marron transition-transform active:scale-95"
+          >
+            🗑️ Eliminar tarea
+          </button>
+        </div>
+      </Modal>
+
+      {/* Confirmación de eliminar tarea */}
+      <Modal
+        abierto={!!confirmarEliminar}
+        onCerrar={() => setConfirmarEliminar(null)}
+        titulo="¿Eliminar esta tarea?"
+      >
+        <p className="text-oliva-oscuro">
+          «{confirmarEliminar?.nombre}» se eliminará para siempre del hogar.
+          Esta acción no se puede deshacer.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <button onClick={() => setConfirmarEliminar(null)} className="btn-secundario flex-1">
+            Cancelar
+          </button>
+          <button
+            onClick={() => handleEliminar(confirmarEliminar)}
+            className="flex-1 rounded-full bg-marron py-3 font-bold text-crema-claro transition-transform active:scale-95"
+          >
+            🗑️ Eliminar
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -256,30 +343,20 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
   )
 }
 
-function BotonSeccion({ activo, onClick, children, badge }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`relative flex-1 rounded-full py-2.5 text-sm font-bold transition-colors ${
-        activo ? 'bg-oliva text-crema-claro' : 'bg-transparent text-oliva-oscuro'
-      }`}
-    >
-      {children}
-      {badge > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-marron px-1 text-xs font-bold text-crema-claro">
-          {badge}
-        </span>
-      )}
-    </button>
-  )
-}
-
-function TareaCard({ tarea, porUid, onCompletar, descansando, saliendo }) {
+function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo }) {
   const ultimo = porUid[tarea.ultimoCompletadoPor]
+  const asignado = tarea.asignadoA ? porUid[tarea.asignadoA] : null
   return (
     <div className={`tarjeta mb-3 flex items-center gap-3 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}>
-      <div className="flex-1">
-        <p className="font-bold text-bosque">{tarea.nombre}</p>
+      <button onClick={onAbrir} className="flex-1 cursor-pointer text-left" aria-label="Opciones de la tarea">
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-bosque">{tarea.nombre}</p>
+          {asignado && (
+            <span className="chip bg-oliva/15 text-oliva" title={`Asignada a ${asignado.nombre}`}>
+              {asignado.icono || '🙂'} {asignado.nombre}
+            </span>
+          )}
+        </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
           <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
           {tarea.periodicidadDias != null ? (
@@ -293,7 +370,7 @@ function TareaCard({ tarea, porUid, onCompletar, descansando, saliendo }) {
             ultimo && <span>última vez: {ultimo.icono} {ultimo.nombre}</span>
           )}
         </div>
-      </div>
+      </button>
       {!descansando && (
         <button onClick={onCompletar} disabled={saliendo} className="btn-primario shrink-0 cursor-pointer px-4 py-2.5 text-sm">
           ✓ Hecha

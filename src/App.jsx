@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from './context/AppContext'
 import { firebaseConfigurado } from './firebase/config'
 import { escucharMensajesPrimerPlano } from './firebase/messaging'
-import { Cargando, IconoAjustes, IconoSol, IconoLuna } from './components/ui'
+import { Cargando, IconoAjustes, IconoSol, IconoLuna, IconoCampana } from './components/ui'
 import { useTheme } from './context/ThemeContext'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
@@ -20,8 +20,20 @@ export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario } = useApp()
   const { theme, toggle } = useTheme()
   const [tab, setTab] = useState('tareas')
+  const [dir, setDir] = useState('der') // dirección del slide entre pestañas
+  const [seccionTareas, setSeccionTareas] = useState('activas') // 'activas' | 'aprobar'
+  const [pendientesAprobar, setPendientesAprobar] = useState(0)
   const [ajustesAbierto, setAjustesAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
+
+  // Orden visual de los tabs (igual que en la barra inferior). La dirección
+  // del deslizamiento depende de si la nueva pestaña está a la derecha o izq.
+  const ORDEN = ['tareas', 'compra', 'gym']
+  function cambiarTab(nuevo) {
+    if (nuevo === tab) return
+    setDir(ORDEN.indexOf(nuevo) > ORDEN.indexOf(tab) ? 'der' : 'izq')
+    setTab(nuevo)
+  }
 
   // Notificaciones en primer plano → banner efímero.
   useEffect(() => {
@@ -55,6 +67,30 @@ export default function App() {
         <h1 className="text-2xl font-bold text-bosque">{TITULOS[tab]}</h1>
         <div className="flex items-center gap-1">
           <button
+            onClick={() => {
+              const enAprobar = tab === 'tareas' && seccionTareas === 'aprobar'
+              if (enAprobar) {
+                setSeccionTareas('activas')
+              } else {
+                cambiarTab('tareas')
+                setSeccionTareas('aprobar')
+              }
+            }}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+              tab === 'tareas' && seccionTareas === 'aprobar'
+                ? 'bg-oliva text-crema-claro'
+                : 'text-oliva-oscuro hover:bg-crema-oscuro'
+            }`}
+            aria-label="Tareas por aprobar"
+          >
+            <IconoCampana />
+            {pendientesAprobar > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-marron px-1 text-[10px] font-bold text-crema-claro">
+                {pendientesAprobar}
+              </span>
+            )}
+          </button>
+          <button
             onClick={toggle}
             className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
             aria-label={theme === 'day' ? 'Cambiar a modo noche' : 'Cambiar a modo día'}
@@ -74,13 +110,15 @@ export default function App() {
       {/* Contenido — las tres pestañas se mantienen montadas y solo se
           muestran/ocultan, para conservar datos y listeners entre cambios
           de pestaña (evita el parpadeo de recarga). */}
-      <main className="flex-1 px-4 pb-28">
-        <div className={tab === 'tareas' ? 'tab-in' : 'hidden'}><Tareas /></div>
-        <div className={tab === 'compra' ? 'tab-in' : 'hidden'}><Compra /></div>
-        <div className={tab === 'gym' ? 'tab-in' : 'hidden'}><Gym /></div>
+      <main className="flex-1 overflow-x-hidden px-4 pb-28">
+        <div className={tab === 'tareas' ? `tab-slide-${dir}` : 'hidden'}>
+          <Tareas seccion={seccionTareas} setSeccion={setSeccionTareas} onPendientes={setPendientesAprobar} />
+        </div>
+        <div className={tab === 'compra' ? `tab-slide-${dir}` : 'hidden'}><Compra /></div>
+        <div className={tab === 'gym' ? `tab-slide-${dir}` : 'hidden'}><Gym /></div>
       </main>
 
-      <BottomNav activo={tab} onCambiar={setTab} />
+      <BottomNav activo={tab} onCambiar={cambiarTab} />
 
       <Ajustes abierto={ajustesAbierto} onCerrar={() => setAjustesAbierto(false)} />
 

@@ -33,11 +33,11 @@
     --crema: 237 239 242; /* #EDEFF2 fondo gris claro */
     --crema-claro: 255 255 255; /* tarjetas blancas */
     --crema-oscuro: 220 225 230; /* #DCE1E6 bordes/2º */
-    --salvia: 43 197 137; /* #2BC589 menta */
+    --salvia: 61 213 152; /* #3DD598 menta (igual que modo noche) */
     --salvia-claro: 214 243 231; /* #D6F3E7 tinte menta claro */
     --salvia-oscuro: 107 118 130; /* #6B7682 atenuado */
-    --oliva: 20 160 107; /* #14A06B verde primario (texto blanco OK) */
-    --oliva-claro: 43 197 137; /* #2BC589 */
+    --oliva: 61 213 152; /* #3DD598 verde primario (igual que modo noche) */
+    --oliva-claro: 92 224 172; /* #5CE0AC */
     --oliva-oscuro: 74 85 96; /* #4A5560 texto atenuado fuerte */
     --bosque: 27 42 51; /* #1B2A33 texto principal */
     --marron: 229 72 77; /* #E5484D coral */
@@ -54,6 +54,7 @@
     height: 100%;
   }
 
+  /* Tipografía: Nunito en cuerpo (font-sans), Fraunces en títulos (font-display). */
   body {
     @apply bg-crema text-bosque font-sans antialiased;
     overscroll-behavior-y: none;
@@ -128,6 +129,38 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Slide direccional entre pestañas. Usamos "left" (no "transform") para no
+   crear un containing block que desplace el botón flotante "+" position:fixed.
+   El overflow-x-hidden del <main> recorta el desplazamiento lateral. */
+.tab-slide-der {
+  position: relative;
+  animation: tabSlideDer 0.28s ease;
+}
+@keyframes tabSlideDer {
+  from {
+    opacity: 0;
+    left: 32px;
+  }
+  to {
+    opacity: 1;
+    left: 0;
+  }
+}
+.tab-slide-izq {
+  position: relative;
+  animation: tabSlideIzq 0.28s ease;
+}
+@keyframes tabSlideIzq {
+  from {
+    opacity: 0;
+    left: -32px;
+  }
+  to {
+    opacity: 1;
+    left: 0;
   }
 }
 
@@ -219,6 +252,8 @@
 @media (prefers-reduced-motion: reduce) {
   .fade-in,
   .tab-in,
+  .tab-slide-der,
+  .tab-slide-izq,
   .pop-pts,
   .salida-completado,
   .late,

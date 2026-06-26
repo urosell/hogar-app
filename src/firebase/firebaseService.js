@@ -177,6 +177,7 @@ export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos }, 
     estado: 'pendiente_aprobacion',
     creadaPor: uid,
     aprobadaPor: null,
+    asignadoA: null, // uid del miembro responsable, o null = sin asignar
     proximaAparicion: null,
     ultimoCompletadoPor: null,
     ultimoCompletadoFecha: null,
@@ -205,6 +206,18 @@ export async function rechazarTarea(hogarId, tareaId) {
   await deleteDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId))
 }
 
+// Elimina una tarea ya activa (la quita para siempre del hogar).
+export async function eliminarTarea(hogarId, tareaId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId))
+}
+
+// Asigna la tarea a un miembro (uid) o la deja sin asignar (null).
+export async function asignarTarea(hogarId, tareaId, asignadoA) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
+    asignadoA: asignadoA ?? null,
+  })
+}
+
 export async function completarTarea(hogarId, tarea, uid) {
   const ref = doc(db, 'hogares', hogarId, 'tareas', tarea.id)
   const ahora = Timestamp.now()
@@ -217,10 +230,13 @@ export async function completarTarea(hogarId, tarea, uid) {
       ultimoCompletadoFecha: ahora,
     })
   } else {
-    // Periódica: descansa y reaparece tras X días.
-    const proxima = Timestamp.fromMillis(
-      ahora.toMillis() + tarea.periodicidadDias * 24 * 60 * 60 * 1000
-    )
+    // Periódica: reaparece por DÍAS de calendario, no por horas.
+    // Da igual la hora a la que se complete (mañana o tarde): la tarea
+    // vuelve a la medianoche del día resultante = hoy + periodicidadDias.
+    const medianoche = new Date()
+    medianoche.setHours(0, 0, 0, 0)
+    medianoche.setDate(medianoche.getDate() + tarea.periodicidadDias)
+    const proxima = Timestamp.fromMillis(medianoche.getTime())
     await updateDoc(ref, {
       ultimoCompletadoPor: uid,
       ultimoCompletadoFecha: ahora,
