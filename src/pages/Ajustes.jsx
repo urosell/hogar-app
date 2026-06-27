@@ -17,6 +17,7 @@ const TIPOS = [
   { clave: 'tareas', labelKey: 'aj.notiTareas', descKey: 'aj.notiTareasDesc', emoji: '✅' },
   { clave: 'compra', labelKey: 'aj.notiCompra', descKey: 'aj.notiCompraDesc', emoji: '🛒' },
   { clave: 'gym', labelKey: 'aj.notiGym', descKey: 'aj.notiGymDesc', emoji: '💪' },
+  { clave: 'marketplace', labelKey: 'aj.notiMarketplace', descKey: 'aj.notiMarketplaceDesc', emoji: '🎁' },
 ]
 
 export default function Ajustes({ abierto, onCerrar }) {
@@ -35,7 +36,7 @@ export default function Ajustes({ abierto, onCerrar }) {
     }
   }, [usuario, abierto])
 
-  const notis = usuario?.notificaciones || { tareas: true, compra: true, gym: true }
+  const notis = usuario?.notificaciones || { tareas: true, compra: true, gym: true, marketplace: true }
 
   async function guardarNombre() {
     if (nombre.trim() && nombre.trim() !== usuario?.nombre) {

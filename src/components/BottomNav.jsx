@@ -1,4 +1,4 @@
-import { IconoCasa, IconoCompra, IconoGym } from './ui'
+import { IconoCasa, IconoCompra, IconoGym, IconoRegalo } from './ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 // Tareas (casa) va primera y un poco más grande que el resto.
@@ -6,6 +6,7 @@ const TABS = [
   { id: 'tareas', clave: 'nav.tareas', Icono: IconoCasa, grande: true },
   { id: 'compra', clave: 'nav.compra', Icono: IconoCompra },
   { id: 'gym', clave: 'nav.gym', Icono: IconoGym },
+  { id: 'marketplace', clave: 'nav.marketplace', Icono: IconoRegalo },
 ]
 
 // Colores tomados del diseño assets/3_Elements_Circled_Navigation.svg

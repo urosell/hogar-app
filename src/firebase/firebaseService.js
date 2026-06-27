@@ -77,7 +77,7 @@ export async function asegurarUsuario(user) {
       puntos: 0,
       puntosGastados: 0, // reservado para el futuro marketplace
       objetosDesbloqueados: [], // reservado para el futuro marketplace
-      notificaciones: { tareas: true, compra: true, gym: true },
+      notificaciones: { tareas: true, compra: true, gym: true, marketplace: true },
       fcmTokens: [],
       creadoEn: serverTimestamp(),
     })
@@ -388,6 +388,91 @@ export function escucharFrecuentes(hogarId, cb) {
   const q = query(frecuentesCol(hogarId), orderBy('vecesUsado', 'desc'), limit(20))
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+// ───────────────────────── Marketplace (recompensas) ─────────────────────
+// Sistema de doble contador de puntos:
+//   - usuarios/{uid}.puntos         = acumulado histórico (= nivel, NUNCA decrece)
+//   - usuarios/{uid}.puntosGastados = total gastado en canjes
+//   - monedero disponible           = puntos - puntosGastados (se calcula en UI)
+
+function recompensasCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'recompensas')
+}
+function canjesCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'canjes')
+}
+
+export async function crearRecompensa(hogarId, { nombre, descripcion, icono, precio, tipo }, uid) {
+  return addDoc(recompensasCol(hogarId), {
+    nombre: nombre.trim(),
+    descripcion: (descripcion || '').trim(),
+    icono: icono || '🎁',
+    precio: Number(precio) || 0,
+    tipo: tipo === 'una_vez' ? 'una_vez' : 'permanente',
+    creadaPor: uid,
+    activa: true, // false cuando una "una_vez" ya ha sido canjeada
+    creadaEn: serverTimestamp(),
+  })
+}
+
+export function escucharRecompensas(hogarId, cb) {
+  // Solo las activas; el orden se hace en cliente para no requerir índice compuesto.
+  const q = query(recompensasCol(hogarId), where('activa', '==', true))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+export async function actualizarRecompensa(hogarId, recompensaId, { nombre, descripcion, icono, precio, tipo }) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'recompensas', recompensaId), {
+    nombre: nombre.trim(),
+    descripcion: (descripcion || '').trim(),
+    icono: icono || '🎁',
+    precio: Number(precio) || 0,
+    tipo: tipo === 'una_vez' ? 'una_vez' : 'permanente',
+  })
+}
+
+export async function eliminarRecompensa(hogarId, recompensaId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'recompensas', recompensaId))
+}
+
+// Canjea una recompensa de forma atómica: registra el canje (pendiente), suma
+// los puntos al gastado del usuario y, si es "una_vez", desactiva la recompensa.
+export async function canjearRecompensa(hogarId, recompensa, uid) {
+  const batch = writeBatch(db)
+  const canjeRef = doc(canjesCol(hogarId)) // id autogenerado
+  batch.set(canjeRef, {
+    recompensaId: recompensa.id,
+    recompensaNombre: recompensa.nombre,
+    recompensaIcono: recompensa.icono || '🎁',
+    canjeadoPor: uid,
+    canjeadoEn: serverTimestamp(),
+    precio: Number(recompensa.precio) || 0,
+    estado: 'pendiente',
+    cumplidoEn: null,
+  })
+  batch.update(refUsuario(uid), { puntosGastados: increment(Number(recompensa.precio) || 0) })
+  if (recompensa.tipo === 'una_vez') {
+    batch.update(doc(db, 'hogares', hogarId, 'recompensas', recompensa.id), { activa: false })
+  }
+  await batch.commit()
+}
+
+export function escucharCanjes(hogarId, cb) {
+  // Todos los canjes ordenados por fecha; la UI separa pendientes/historial.
+  const q = query(canjesCol(hogarId), orderBy('canjeadoEn', 'desc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+export async function marcarCanjeCumplido(hogarId, canjeId) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'canjes', canjeId), {
+    estado: 'cumplido',
+    cumplidoEn: serverTimestamp(),
   })
 }
 

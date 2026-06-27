@@ -96,6 +96,7 @@ export default {
       }
     }
 
+    console.log(JSON.stringify({ destinos: destinos.length, sent, invalid }))
     return json({ sent, invalid }, 200, origin)
   },
 }

@@ -5,6 +5,15 @@ export const AVATARES = [
   '🌵', '🍄', '🌙', '⭐', '🔥', '🌊', '🍀', '🥑',
 ]
 
+// Galería de iconos para las recompensas del marketplace.
+// (Arquitectura preparada para, en el futuro, permitir una imagen custom en
+// lugar de un emoji: bastaría guardar una URL y elegir entre icono|imagen.)
+export const ICONOS_RECOMPENSA = [
+  '🎁', '🍕', '🍔', '🍦', '🍫', '🍿', '☕', '🍷',
+  '🎮', '🎬', '📺', '🛋️', '💆', '💅', '🛁', '😴',
+  '🏖️', '🚗', '🛍️', '💸', '🎟️', '🎤', '📚', '🧖',
+]
+
 // Categorías predefinidas para la lista de la compra.
 export const CATEGORIAS = [
   { nombre: 'Fruta', emoji: '🍎', color: '#C2453B' },
