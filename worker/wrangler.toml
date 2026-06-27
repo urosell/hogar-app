@@ -1,0 +1,7 @@
+name = "hogar-push"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# Los secrets NO van aquí (se suben con `wrangler secret put`):
+#   SERVICE_ACCOUNT  → JSON de la service account de Firebase
+#   PUSH_SECRET      → cadena compartida con el cliente (VITE_PUSH_SECRET)

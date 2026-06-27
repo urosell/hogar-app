@@ -11,7 +11,7 @@ import {
   actualizarTarea,
   reactivarTarea,
 } from '../firebase/firebaseService'
-import { emitirEvento } from '../firebase/notificaciones'
+import { enviarPush } from '../firebase/push'
 import { nivelDesdePuntos } from '../data/constantes'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
@@ -25,7 +25,7 @@ function diasRestantes(proximaAparicion) {
 }
 
 export default function Tareas({ seccion, setSeccion, onPendientes }) {
-  const { hogarId, uid, usuario, miembros } = useApp()
+  const { hogarId, uid, usuario, miembros, companero } = useApp()
   const { t } = useIdioma()
   const [tareas, setTareas] = useState([])
   const [cargado, setCargado] = useState(false)
@@ -87,11 +87,9 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
     setFestejo({ puntos: tarea.puntos, key: Date.now(), uid }) // uid = quien completa/gana
 
     await completarTarea(hogarId, tarea, uid)
-    emitirEvento(hogarId, {
-      tipo: 'tareas',
+    enviarPush(companero, 'tareas', {
       titulo: t('notif.tareaHechaTitulo'),
       cuerpo: t('notif.tareaHechaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: tarea.nombre, puntos: tarea.puntos }),
-      deUid: uid,
     })
     setTimeout(() => setCompletando((id) => (id === tarea.id ? null : id)), 450)
     setTimeout(() => setFestejo(null), 900)
@@ -191,11 +189,9 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
         onCerrar={() => setModalAbierto(false)}
         onGuardar={async (datos) => {
           await crearTarea(hogarId, datos, uid)
-          emitirEvento(hogarId, {
-            tipo: 'tareas',
+          enviarPush(companero, 'tareas', {
             titulo: t('notif.nuevaTareaTitulo'),
             cuerpo: t('notif.nuevaTareaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: datos.nombre }),
-            deUid: uid,
           })
           setModalAbierto(false)
         }}

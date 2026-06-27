@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { escucharGymRango, alternarGym, claveFecha } from '../firebase/firebaseService'
-import { emitirEvento } from '../firebase/notificaciones'
+import { enviarPush } from '../firebase/push'
 import { Vacio, IconoFlecha, Skeleton, Modal } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 import { MESES_CORTO, MESES_LARGO, DIAS_SEMANA } from '../data/i18n'
@@ -34,7 +34,7 @@ const GRAFICO = {
 }
 
 export default function Gym() {
-  const { hogarId, uid, usuario, miembros } = useApp()
+  const { hogarId, uid, usuario, miembros, companero } = useApp()
   const { theme } = useTheme()
   const { idioma, t } = useIdioma()
   const g = GRAFICO[theme] || GRAFICO.night
@@ -79,9 +79,9 @@ export default function Gym() {
     const yaFue = asistentesHoy.includes(miembroId)
     await alternarGym(hogarId, hoyClave, miembroId, !yaFue)
     if (!yaFue && miembroId === uid) {
-      emitirEvento(hogarId, {
-        tipo: 'gym', titulo: t('notif.gymTitulo'),
-        cuerpo: t('notif.gymCuerpo', { nombre: usuario?.nombre || t('notif.tuPareja') }), deUid: uid,
+      enviarPush(companero, 'gym', {
+        titulo: t('notif.gymTitulo'),
+        cuerpo: t('notif.gymCuerpo', { nombre: usuario?.nombre || t('notif.tuPareja') }),
       })
     }
   }
