@@ -9,6 +9,13 @@ const base = process.env.VITE_BASE_PATH || '/hogar-app/'
 
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/' : base,
+  // El watcher de Vite peta (EBUSY) en Windows al vigilar los assets sueltos
+  // mientras se copian/guardan. No necesitan hot-reload, así que los ignoramos.
+  server: {
+    watch: {
+      ignored: ['**/assets/**'],
+    },
+  },
   build: {
     rollupOptions: {
       output: {

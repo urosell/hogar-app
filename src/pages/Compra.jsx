@@ -18,6 +18,7 @@ import { Modal, Vacio, IconoMas, IconoFlecha, IconoPapelera, SkeletonTarjetas } 
 import { useIdioma } from '../context/IdiomaContext'
 import { useTheme } from '../context/ThemeContext'
 import gataSorti from '../../assets/Sorti.svg'
+import gataMartina from '../../assets/Martina.svg'
 
 export default function Compra() {
   const { hogarId } = useApp()
@@ -49,14 +50,22 @@ export default function Compra() {
         <SelectorListas listas={listas} cargado={cargado} onAbrir={setSeleccionada} hogarId={hogarId} />
       )}
 
-      {/* Gata "Sorti" decorativa, abajo a la izquierda (invertida en modo noche
-          porque el dibujo es de trazo negro). */}
+      {/* Gatas decorativas abajo a la izquierda (invertidas en modo noche
+          porque los dibujos son de trazo negro). */}
       <img
         src={gataSorti}
         alt=""
         aria-hidden="true"
         draggable="false"
         className="pointer-events-none fixed bottom-20 left-8 z-20 h-32 select-none"
+        style={{ marginBottom: 'var(--safe-bottom)', filter: theme === 'night' ? 'invert(1)' : 'none' }}
+      />
+      <img
+        src={gataMartina}
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+        className="pointer-events-none fixed bottom-20 left-28 z-20 h-32 select-none"
         style={{ marginBottom: 'var(--safe-bottom)', filter: theme === 'night' ? 'invert(1)' : 'none' }}
       />
     </>
