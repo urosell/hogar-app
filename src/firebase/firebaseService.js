@@ -574,6 +574,79 @@ export function escucharItemsProyecto(hogarId, proyectoId, cb) {
   })
 }
 
+// ──────────────────────────────── Calendario ─────────────────────────────
+// Eventos sueltos del calendario (ej. "cena con amigos", "cita médico").
+// Las fechas clave de proyectos y los días de gym se muestran también en el
+// calendario, pero NO se guardan aquí: se leen de sus propias colecciones.
+
+function eventosCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'eventos')
+}
+
+// Convierte 'YYYY-MM-DD' + 'HH:MM' (opcional) a Timestamp local, o null.
+function fechaHoraATimestamp(fechaStr, horaStr) {
+  if (!fechaStr) return null
+  const [y, m, d] = String(fechaStr).split('-').map(Number)
+  if (!y || !m || !d) return null
+  let hh = 0, mm = 0
+  if (horaStr) {
+    const [h, mi] = String(horaStr).split(':').map(Number)
+    hh = h || 0; mm = mi || 0
+  }
+  return Timestamp.fromMillis(new Date(y, m - 1, d, hh, mm).getTime())
+}
+
+export async function crearEvento(hogarId, { titulo, notas, fecha, hora, anual }, uid) {
+  return addDoc(eventosCol(hogarId), {
+    titulo: titulo.trim(),
+    notas: (notas || '').trim(),
+    fecha: fechaHoraATimestamp(fecha, hora),
+    tieneHora: !!hora,
+    anual: !!anual, // aniversario: se repite cada año en el mismo día/mes
+    creadoPor: uid,
+    creadoEn: serverTimestamp(),
+  })
+}
+
+export async function actualizarEvento(hogarId, eventoId, { titulo, notas, fecha, hora, anual }) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'eventos', eventoId), {
+    titulo: titulo.trim(),
+    notas: (notas || '').trim(),
+    fecha: fechaHoraATimestamp(fecha, hora),
+    tieneHora: !!hora,
+    anual: !!anual,
+  })
+}
+
+export async function eliminarEvento(hogarId, eventoId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'eventos', eventoId))
+}
+
+// Escucha los eventos en un rango [desde, hasta]. Acepta Date o Timestamp.
+// Para el mes visible del calendario.
+export function escucharEventosRango(hogarId, desde, hasta, cb) {
+  const d = desde instanceof Date ? Timestamp.fromDate(desde) : desde
+  const h = hasta instanceof Date ? Timestamp.fromDate(hasta) : hasta
+  const q = query(
+    eventosCol(hogarId),
+    where('fecha', '>=', d),
+    where('fecha', '<=', h),
+    orderBy('fecha', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+// Escucha TODOS los eventos anuales (aniversarios). Se proyectan sobre el mes
+// visible por su día/mes, sin importar el año en que se crearon.
+export function escucharEventosAnuales(hogarId, cb) {
+  const q = query(eventosCol(hogarId), where('anual', '==', true))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
 // ─────────────────────────────────── Gym ─────────────────────────────────
 
 export function claveFecha(date) {

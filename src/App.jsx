@@ -13,6 +13,7 @@ import Tareas from './pages/Tareas'
 import Compra from './pages/Compra'
 import Gym from './pages/Gym'
 import Proyectos from './pages/Proyectos'
+import Calendario from './pages/Calendario'
 import Marketplace from './pages/Marketplace'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
@@ -21,7 +22,7 @@ export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario } = useApp()
   const { theme, toggle } = useTheme()
   const { t } = useIdioma()
-  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), marketplace: t('titulo.marketplace') }
+  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), calendario: t('titulo.calendario'), marketplace: t('titulo.marketplace') }
   const [tab, setTab] = useState('tareas')
   const [dir, setDir] = useState('der') // dirección del slide entre pestañas
   const [seccionTareas, setSeccionTareas] = useState('activas') // 'activas' | 'aprobar'
@@ -31,7 +32,7 @@ export default function App() {
 
   // Orden visual de los tabs (igual que en la barra inferior). La dirección
   // del deslizamiento depende de si la nueva pestaña está a la derecha o izq.
-  const ORDEN = ['tareas', 'compra', 'gym', 'proyectos', 'marketplace']
+  const ORDEN = ['tareas', 'compra', 'gym', 'proyectos', 'calendario', 'marketplace']
   function cambiarTab(nuevo) {
     if (nuevo === tab) return
     setDir(ORDEN.indexOf(nuevo) > ORDEN.indexOf(tab) ? 'der' : 'izq')
@@ -120,6 +121,7 @@ export default function App() {
         <div className={tab === 'compra' ? `tab-slide-${dir}` : 'hidden'}><Compra /></div>
         <div className={tab === 'gym' ? `tab-slide-${dir}` : 'hidden'}><Gym /></div>
         <div className={tab === 'proyectos' ? `tab-slide-${dir}` : 'hidden'}><Proyectos /></div>
+        <div className={tab === 'calendario' ? `tab-slide-${dir}` : 'hidden'}><Calendario /></div>
         <div className={tab === 'marketplace' ? `tab-slide-${dir}` : 'hidden'}><Marketplace /></div>
       </main>
 
