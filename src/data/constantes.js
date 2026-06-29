@@ -14,6 +14,13 @@ export const ICONOS_RECOMPENSA = [
   '🏖️', '🚗', '🛍️', '💸', '🎟️', '🎤', '📚', '🧖',
 ]
 
+// Galería de iconos para los proyectos (habitaciones/zonas del hogar y tareas grandes).
+export const ICONOS_PROYECTO = [
+  '📦', '🛏️', '🛋️', '🍳', '🚿', '🛁', '🚪', '🪟',
+  '🪴', '🌿', '💡', '🔨', '🎨', '🧹', '🏠', '🚗',
+  '🖼️', '📺', '🧺', '🪑', '🧸', '📚', '🏡', '🌳',
+]
+
 // Categorías predefinidas para la lista de la compra.
 export const CATEGORIAS = [
   { nombre: 'Fruta', emoji: '🍎', color: '#C2453B' },

@@ -23,8 +23,9 @@
     --marron: 255 87 95; /* #FF575F coral */
     --marron-claro: 255 138 143; /* #FF8A8F */
     --marron-oscuro: 255 122 128; /* #FF7A80 */
-    --shadow-suave: 0 2px 12px rgba(0, 0, 0, 0.25);
-    --shadow-tarjeta: 0 8px 28px rgba(0, 0, 0, 0.38);
+    /* Elevación soft/clay: sombra exterior + halo superior sutil para dar volumen "blando". */
+    --shadow-suave: 0 2px 8px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    --shadow-tarjeta: 0 10px 30px rgba(0, 0, 0, 0.36), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
     --skeleton-shimmer: rgba(255, 255, 255, 0.08);
   }
 
@@ -43,8 +44,9 @@
     --marron: 229 72 77; /* #E5484D coral */
     --marron-claro: 242 120 124; /* #F2787C */
     --marron-oscuro: 179 50 47; /* #B3322F */
-    --shadow-suave: 0 2px 12px rgba(20, 40, 60, 0.08);
-    --shadow-tarjeta: 0 8px 24px rgba(20, 40, 60, 0.12);
+    /* Elevación soft/clay (día): sombra exterior suave + halo blanco superior. */
+    --shadow-suave: 0 2px 8px rgba(20, 40, 60, 0.08), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    --shadow-tarjeta: 0 10px 26px rgba(20, 40, 60, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
     --skeleton-shimmer: rgba(255, 255, 255, 0.6);
   }
 

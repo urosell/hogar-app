@@ -476,6 +476,104 @@ export async function marcarCanjeCumplido(hogarId, canjeId) {
   })
 }
 
+// ──────────────────────────────── Proyectos ──────────────────────────────
+// Proyectos del hogar (ej. "Dormitorio"): cada uno tiene una subcolección de
+// items (cosas que hacer). Los items pueden:
+//   - llevar notas de texto libre y un enlace (URL),
+//   - tener una fechaClave (Timestamp) — se guarda consultable para la futura
+//     pestaña de Calendario,
+//   - depender de otros items (array de ids). La dependencia es solo un AVISO
+//     visual: no impide marcar el item como hecho.
+
+function proyectosCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'proyectos')
+}
+function itemsProyectoCol(hogarId, proyectoId) {
+  return collection(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items')
+}
+
+// Convierte 'YYYY-MM-DD' (input date) a Timestamp a medianoche local, o null.
+function fechaClaveATimestamp(str) {
+  if (!str) return null
+  const [y, m, d] = String(str).split('-').map(Number)
+  if (!y || !m || !d) return null
+  return Timestamp.fromMillis(new Date(y, m - 1, d).getTime())
+}
+
+export async function crearProyecto(hogarId, { nombre, icono }, uid) {
+  return addDoc(proyectosCol(hogarId), {
+    nombre: nombre.trim(),
+    icono: icono || '📦',
+    creadoPor: uid,
+    creadoEn: serverTimestamp(),
+  })
+}
+
+export async function actualizarProyecto(hogarId, proyectoId, { nombre, icono }) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId), {
+    nombre: nombre.trim(),
+    icono: icono || '📦',
+  })
+}
+
+export async function eliminarProyecto(hogarId, proyectoId) {
+  // Borra los items primero (Firestore no borra subcolecciones en cascada).
+  const itemsSnap = await getDocs(itemsProyectoCol(hogarId, proyectoId))
+  await Promise.all(itemsSnap.docs.map((d) => deleteDoc(d.ref)))
+  await deleteDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId))
+}
+
+export function escucharProyectos(hogarId, cb) {
+  const q = query(proyectosCol(hogarId), orderBy('creadoEn', 'desc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+export async function crearItemProyecto(hogarId, proyectoId, { nombre, notas, enlace, fechaClave, dependencias }, uid) {
+  return addDoc(itemsProyectoCol(hogarId, proyectoId), {
+    nombre: nombre.trim(),
+    notas: (notas || '').trim(),
+    enlace: (enlace || '').trim(),
+    fechaClave: fechaClaveATimestamp(fechaClave),
+    dependencias: Array.isArray(dependencias) ? dependencias : [],
+    hecho: false,
+    hechoPor: null,
+    hechoEn: null,
+    creadoPor: uid,
+    creadoEn: serverTimestamp(),
+  })
+}
+
+export async function actualizarItemProyecto(hogarId, proyectoId, itemId, { nombre, notas, enlace, fechaClave, dependencias }) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId), {
+    nombre: nombre.trim(),
+    notas: (notas || '').trim(),
+    enlace: (enlace || '').trim(),
+    fechaClave: fechaClaveATimestamp(fechaClave),
+    dependencias: Array.isArray(dependencias) ? dependencias : [],
+  })
+}
+
+export async function eliminarItemProyecto(hogarId, proyectoId, itemId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId))
+}
+
+export async function alternarItemProyecto(hogarId, proyectoId, itemId, hecho, uid) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId), {
+    hecho,
+    hechoPor: hecho ? uid : null,
+    hechoEn: hecho ? serverTimestamp() : null,
+  })
+}
+
+export function escucharItemsProyecto(hogarId, proyectoId, cb) {
+  const q = query(itemsProyectoCol(hogarId, proyectoId), orderBy('creadoEn', 'asc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
 // ─────────────────────────────────── Gym ─────────────────────────────────
 
 export function claveFecha(date) {
