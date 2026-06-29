@@ -16,9 +16,18 @@ import { Modal, Vacio, IconoMas, IconoFlecha, IconoGym } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 // Colores de las fuentes (inline para que sean distinguibles en ambos temas).
-const COLOR_EVENTO = '#3DD598' // menta
 const COLOR_PROYECTO = '#FF7A80' // coral
 const COLOR_GYM = '#5AA9E6' // azul
+const COLOR_PAREJA = '#3DD598' // menta (eventos compartidos)
+// Color por persona, asignado por el orden estable de uids del hogar.
+const COLORES_PERSONA = ['#A78BFA', '#F5A623'] // violeta, ámbar
+
+// Devuelve el color de un evento según su dueño ('pareja' o uid de un miembro).
+function colorEvento(quien, ordenUids) {
+  if (!quien || quien === 'pareja') return COLOR_PAREJA
+  const idx = ordenUids.indexOf(quien)
+  return COLORES_PERSONA[idx] ?? COLOR_PAREJA
+}
 
 function fmtHora(ts) {
   const d = ts.toDate ? ts.toDate() : new Date(ts)
@@ -88,6 +97,10 @@ export default function Calendario() {
 
   const fechasProyectos = useFechasProyectos(hogarId)
   const porUid = useMemo(() => Object.fromEntries(miembros.map((m) => [m.id, m])), [miembros])
+  // Orden estable de uids → color consistente por persona en ambos dispositivos.
+  const ordenUids = useMemo(() => miembros.map((m) => m.id).sort(), [miembros])
+  // Nombre legible del dueño de un evento.
+  const nombreQuien = (quien) => (!quien || quien === 'pareja' ? t('cal.pareja') : porUid[quien]?.nombre || '—')
 
   // Límites del mes visible.
   const { anio, mes } = cursor
@@ -206,8 +219,10 @@ export default function Calendario() {
                 }`}>
                   {dia}
                 </span>
-                <span className="mt-0.5 flex h-1.5 items-center gap-0.5">
-                  {info?.eventos.length > 0 && <Dot color={COLOR_EVENTO} />}
+                <span className="mt-0.5 flex h-1.5 items-center justify-center gap-0.5">
+                  {[...new Set((info?.eventos || []).map((e) => colorEvento(e.quien, ordenUids)))].map((c) => (
+                    <Dot key={c} color={c} />
+                  ))}
                   {info?.proyectos.length > 0 && <Dot color={COLOR_PROYECTO} />}
                   {info?.gym?.length > 0 && <Dot color={COLOR_GYM} />}
                 </span>
@@ -216,8 +231,11 @@ export default function Calendario() {
           })}
         </div>
         {/* Leyenda */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-crema-oscuro/60 pt-2.5 text-xs text-oliva-oscuro/70">
-          <Leyenda color={COLOR_EVENTO} texto={t('cal.leyendaEvento')} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-crema-oscuro/60 pt-2.5 text-xs text-oliva-oscuro/70">
+          {ordenUids.map((id, i) => (
+            <Leyenda key={id} color={COLORES_PERSONA[i] ?? COLOR_PAREJA} texto={porUid[id]?.nombre || '—'} />
+          ))}
+          <Leyenda color={COLOR_PAREJA} texto={t('cal.pareja')} />
           <Leyenda color={COLOR_PROYECTO} texto={t('cal.leyendaProyecto')} />
           <Leyenda color={COLOR_GYM} texto={t('cal.leyendaGym')} />
         </div>
@@ -230,23 +248,25 @@ export default function Calendario() {
           <Vacio emoji="📅" titulo={t('cal.sinEventosDia')} />
         ) : (
           <>
-            {diaSel.eventos.map((e) => (
-              <button key={e.id} onClick={() => setDetalle(e)} className="tarjeta flex w-full items-start gap-3 text-left transition-transform active:scale-[0.99]">
-                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLOR_EVENTO }} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 font-bold text-bosque">
-                    {e.anual && <span>🎂</span>}
-                    {e.titulo}
-                  </p>
-                  {e.anual ? (
-                    <p className="text-xs font-bold" style={{ color: COLOR_EVENTO }}>{t('cal.aniversario')}</p>
-                  ) : e.tieneHora ? (
-                    <p className="text-xs font-bold text-oliva-oscuro/70">{fmtHora(e.fecha)}</p>
-                  ) : null}
-                  {e.notas && <p className="mt-0.5 truncate text-sm text-oliva-oscuro/70">{e.notas}</p>}
-                </div>
-              </button>
-            ))}
+            {diaSel.eventos.map((e) => {
+              const color = colorEvento(e.quien, ordenUids)
+              return (
+                <button key={e.id} onClick={() => setDetalle(e)} className="tarjeta flex w-full items-start gap-3 text-left transition-transform active:scale-[0.99]">
+                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 font-bold text-bosque">
+                      {e.anual && <span>🎂</span>}
+                      {e.titulo}
+                    </p>
+                    <p className="text-xs font-bold" style={{ color }}>
+                      {nombreQuien(e.quien)}
+                      {e.anual ? ` · ${t('cal.aniversario')}` : e.tieneHora ? ` · ${fmtHora(e.fecha)}` : ''}
+                    </p>
+                    {e.notas && <p className="mt-0.5 truncate text-sm text-oliva-oscuro/70">{e.notas}</p>}
+                  </div>
+                </button>
+              )
+            })}
             {diaSel.proyectos.map((p) => (
               <div key={p.id} className="tarjeta flex items-center gap-3">
                 <span className="text-2xl">{p.proyectoIcono || '📦'}</span>
@@ -288,6 +308,8 @@ export default function Calendario() {
         abierto={modalEvento || !!editarEvento}
         evento={editarEvento}
         fechaPorDefecto={seleccion}
+        miembros={miembros}
+        ordenUids={ordenUids}
         onCerrar={() => { setModalEvento(false); setEditarEvento(null) }}
         onGuardar={async (datos) => {
           if (editarEvento) await actualizarEvento(hogarId, editarEvento.id, datos)
@@ -309,6 +331,10 @@ export default function Calendario() {
                 {(() => { const [y, m, d] = claveFecha(detalle.fecha.toDate()).split('-').map(Number); return `${d} ${MESES_CORTO[idioma]?.[m - 1]}` })()}
                 {detalle.anual ? ` · ${t('cal.aniversario')}` : detalle.tieneHora ? ` · ${fmtHora(detalle.fecha)}` : ''}
               </p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: `${colorEvento(detalle.quien, ordenUids)}22`, color: colorEvento(detalle.quien, ordenUids) }}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colorEvento(detalle.quien, ordenUids) }} />
+                {nombreQuien(detalle.quien)}
+              </span>
             </div>
             {detalle.notas && <p className="whitespace-pre-wrap rounded-2xl bg-crema-claro px-3 py-2.5 text-oliva-oscuro">{detalle.notas}</p>}
             <div className="flex gap-2">
@@ -349,7 +375,7 @@ function Leyenda({ color, texto }) {
   )
 }
 
-function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto }) {
+function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto, miembros, ordenUids }) {
   const { t } = useIdioma()
   const editando = !!evento
   const [titulo, setTitulo] = useState('')
@@ -357,6 +383,7 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto }) 
   const [hora, setHora] = useState('')
   const [notas, setNotas] = useState('')
   const [anual, setAnual] = useState(false)
+  const [quien, setQuien] = useState('pareja')
   const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
@@ -367,8 +394,9 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto }) 
       setHora(evento.tieneHora ? fmtHora(evento.fecha) : '')
       setNotas(evento.notas || '')
       setAnual(!!evento.anual)
+      setQuien(evento.quien || 'pareja')
     } else {
-      setTitulo(''); setFecha(fechaPorDefecto || ''); setHora(''); setNotas(''); setAnual(false)
+      setTitulo(''); setFecha(fechaPorDefecto || ''); setHora(''); setNotas(''); setAnual(false); setQuien('pareja')
     }
   }, [abierto, evento, fechaPorDefecto])
 
@@ -380,11 +408,17 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto }) 
     setEnviando(true)
     try {
       // Un aniversario ignora la hora (es un día entero, todos los años).
-      await onGuardar({ titulo: titulo.trim(), notas, fecha, hora: anual ? '' : hora, anual })
+      await onGuardar({ titulo: titulo.trim(), notas, fecha, hora: anual ? '' : hora, anual, quien })
     } finally {
       setEnviando(false)
     }
   }
+
+  // Opciones de dueño: cada miembro (con su color) + Pareja.
+  const opcionesQuien = [
+    ...miembros.map((m) => ({ id: m.id, label: m.nombre || '—', icono: m.icono || '🙂', color: COLORES_PERSONA[ordenUids.indexOf(m.id)] ?? COLOR_PAREJA })),
+    { id: 'pareja', label: t('cal.pareja'), icono: '💞', color: COLOR_PAREJA },
+  ]
 
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} titulo={editando ? t('cal.editarEvento') : t('cal.crearEvento')}>
@@ -392,6 +426,26 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto }) 
         <div>
           <label className="etiqueta">{t('cal.tituloLabel')}</label>
           <input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder={t('cal.tituloPlaceholder')} className="input" maxLength={60} />
+        </div>
+        <div>
+          <label className="etiqueta">{t('cal.quienLabel')}</label>
+          <div className="flex flex-wrap gap-2">
+            {opcionesQuien.map((o) => {
+              const sel = quien === o.id
+              return (
+                <button
+                  type="button"
+                  key={o.id}
+                  onClick={() => setQuien(o.id)}
+                  className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold transition-colors"
+                  style={sel ? { backgroundColor: o.color, color: '#fff' } : { backgroundColor: 'rgb(var(--crema-oscuro))', color: 'rgb(var(--oliva-oscuro))' }}
+                >
+                  <span className="text-base">{o.icono}</span>
+                  {o.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="flex gap-3">
           <div className="flex-1">

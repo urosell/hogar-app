@@ -171,10 +171,23 @@ function tareasCol(hogarId) {
   return collection(db, 'hogares', hogarId, 'tareas')
 }
 
-export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos }, uid) {
+// Próxima ocurrencia (medianoche local) de un día de la semana (0=Dom .. 6=Sáb).
+// incluyeHoy=true: si hoy ya es ese día, devuelve hoy (para programar al aprobar).
+// incluyeHoy=false: siempre salta a la semana siguiente si hoy es ese día (al completar).
+function proximoDiaSemana(diaSemana, incluyeHoy) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  let suma = (diaSemana - d.getDay() + 7) % 7
+  if (suma === 0 && !incluyeHoy) suma = 7
+  d.setDate(d.getDate() + suma)
+  return Timestamp.fromMillis(d.getTime())
+}
+
+export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos, diaSemana }, uid) {
   return addDoc(tareasCol(hogarId), {
     nombre: nombre.trim(),
-    periodicidadDias: periodicidadDias ?? null, // null = definitiva
+    periodicidadDias: periodicidadDias ?? null, // null = definitiva o semanal
+    diaSemana: diaSemana ?? null, // 0-6 (cada semana ese día); null = no aplica
     puntos: Number(puntos) || 0,
     estado: 'pendiente_aprobacion',
     creadaPor: uid,
@@ -196,11 +209,14 @@ export function escucharTareas(hogarId, cb) {
   })
 }
 
-export async function aprobarTarea(hogarId, tareaId, uid) {
-  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
+export async function aprobarTarea(hogarId, tarea, uid) {
+  // Una tarea semanal se programa ya a su próximo día (hoy incluido); el resto
+  // queda disponible de inmediato (proximaAparicion = null).
+  const proxima = tarea.diaSemana != null ? proximoDiaSemana(tarea.diaSemana, true) : null
+  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tarea.id), {
     estado: 'activa',
     aprobadaPor: uid,
-    proximaAparicion: null,
+    proximaAparicion: proxima,
   })
 }
 
@@ -238,12 +254,13 @@ export async function asignarTarea(hogarId, tareaId, asignadoA) {
   })
 }
 
-// Edita los datos base de una tarea (nombre, puntos, periodicidad).
-export async function actualizarTarea(hogarId, tareaId, { nombre, puntos, periodicidadDias }) {
+// Edita los datos base de una tarea (nombre, puntos, periodicidad, día semanal).
+export async function actualizarTarea(hogarId, tareaId, { nombre, puntos, periodicidadDias, diaSemana }) {
   await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
     nombre: nombre.trim(),
     puntos: Number(puntos) || 0,
     periodicidadDias: periodicidadDias ?? null,
+    diaSemana: diaSemana ?? null,
   })
 }
 
@@ -251,7 +268,14 @@ export async function completarTarea(hogarId, tarea, uid) {
   const ref = doc(db, 'hogares', hogarId, 'tareas', tarea.id)
   const ahora = Timestamp.now()
 
-  if (tarea.periodicidadDias == null) {
+  if (tarea.diaSemana != null) {
+    // Semanal: reaparece en la próxima ocurrencia de ese día (sin contar hoy).
+    await updateDoc(ref, {
+      ultimoCompletadoPor: uid,
+      ultimoCompletadoFecha: ahora,
+      proximaAparicion: proximoDiaSemana(tarea.diaSemana, false),
+    })
+  } else if (tarea.periodicidadDias == null) {
     // Definitiva: desaparece para siempre.
     await updateDoc(ref, {
       estado: 'completada',
@@ -596,25 +620,27 @@ function fechaHoraATimestamp(fechaStr, horaStr) {
   return Timestamp.fromMillis(new Date(y, m - 1, d, hh, mm).getTime())
 }
 
-export async function crearEvento(hogarId, { titulo, notas, fecha, hora, anual }, uid) {
+export async function crearEvento(hogarId, { titulo, notas, fecha, hora, anual, quien }, uid) {
   return addDoc(eventosCol(hogarId), {
     titulo: titulo.trim(),
     notas: (notas || '').trim(),
     fecha: fechaHoraATimestamp(fecha, hora),
     tieneHora: !!hora,
     anual: !!anual, // aniversario: se repite cada año en el mismo día/mes
+    quien: quien || 'pareja', // uid de un miembro o 'pareja' (compartido)
     creadoPor: uid,
     creadoEn: serverTimestamp(),
   })
 }
 
-export async function actualizarEvento(hogarId, eventoId, { titulo, notas, fecha, hora, anual }) {
+export async function actualizarEvento(hogarId, eventoId, { titulo, notas, fecha, hora, anual, quien }) {
   await updateDoc(doc(db, 'hogares', hogarId, 'eventos', eventoId), {
     titulo: titulo.trim(),
     notas: (notas || '').trim(),
     fecha: fechaHoraATimestamp(fecha, hora),
     tieneHora: !!hora,
     anual: !!anual,
+    quien: quien || 'pareja',
   })
 }
 

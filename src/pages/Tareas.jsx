@@ -13,15 +13,23 @@ import {
 } from '../firebase/firebaseService'
 import { enviarPush } from '../firebase/push'
 import { nivelDesdePuntos } from '../data/constantes'
+import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 const DIA = 24 * 60 * 60 * 1000
+// Orden de presentación lunes→domingo, con su valor Date.getDay() (0=Dom).
+const ORDEN_DIAS = [1, 2, 3, 4, 5, 6, 0]
 
 function diasRestantes(proximaAparicion) {
   if (!proximaAparicion) return 0
   const ms = proximaAparicion.toMillis() - Date.now()
   return Math.max(0, Math.ceil(ms / DIA))
+}
+
+// "quedan X días" / "queda 1 día" para tareas semanales descansando.
+function textoQuedan(t, n) {
+  return n === 1 ? t('tareas.quedaUnDia') : t('tareas.quedanDias', { n })
 }
 
 export default function Tareas({ seccion, setSeccion, onPendientes }) {
@@ -114,7 +122,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
   const detalleDescansa = detalleVivo?.proximaAparicion && detalleVivo.proximaAparicion.toMillis() > limite
 
   async function handleAprobar(tarea) {
-    await aprobarTarea(hogarId, tarea.id, uid)
+    await aprobarTarea(hogarId, tarea, uid)
   }
   async function handleRechazar(tarea) {
     await rechazarTarea(hogarId, tarea.id)
@@ -381,7 +389,7 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
 }
 
 function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo }) {
-  const { t } = useIdioma()
+  const { t, idioma } = useIdioma()
   const ultimo = porUid[tarea.ultimoCompletadoPor]
   const asignado = tarea.asignadoA ? porUid[tarea.asignadoA] : null
   return (
@@ -397,13 +405,19 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
           <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
-          {tarea.periodicidadDias != null ? (
+          {tarea.diaSemana != null ? (
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDiaSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })}</span>
+          ) : tarea.periodicidadDias != null ? (
             <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDias', { n: tarea.periodicidadDias })}</span>
           ) : (
             <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.unaVez')}</span>
           )}
           {descansando ? (
-            <span className="font-bold text-marron">{t('tareas.vuelveEn', { n: diasRestantes(tarea.proximaAparicion) })}</span>
+            <span className="font-bold text-marron">
+              {tarea.diaSemana != null
+                ? textoQuedan(t, diasRestantes(tarea.proximaAparicion))
+                : t('tareas.vuelveEn', { n: diasRestantes(tarea.proximaAparicion) })}
+            </span>
           ) : (
             ultimo && <span>{t('tareas.ultimaVez')} {ultimo.icono} {ultimo.nombre}</span>
           )}
@@ -419,7 +433,7 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
 }
 
 function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
-  const { t } = useIdioma()
+  const { t, idioma } = useIdioma()
   return (
     <div className="tarjeta mb-3">
       <div className="flex items-center justify-between">
@@ -427,7 +441,11 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
         <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
       </div>
       <p className="mt-1.5 text-xs text-oliva-oscuro">
-        {tarea.periodicidadDias != null ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias }) : t('tareas.unaSolaVez')}
+        {tarea.diaSemana != null
+          ? t('tareas.recurrenteSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })
+          : tarea.periodicidadDias != null
+            ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias })
+            : t('tareas.unaSolaVez')}
         {creador && ` · ${t('tareas.propuestaPor', { icono: creador.icono, nombre: creador.nombre })}`}
       </p>
       {esMia ? (
@@ -453,12 +471,13 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
 
 // Modal para crear una tarea nueva o editar una existente (si recibe `tarea`).
 function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
-  const { t } = useIdioma()
+  const { t, idioma } = useIdioma()
   const editando = !!tarea
   const [nombre, setNombre] = useState('')
   const [puntos, setPuntos] = useState(10)
-  const [recurrente, setRecurrente] = useState(false)
+  const [modo, setModo] = useState('unaVez') // 'unaVez' | 'dias' | 'semana'
   const [dias, setDias] = useState(7)
+  const [diaSemana, setDiaSemana] = useState(new Date().getDay())
   const [enviando, setEnviando] = useState(false)
 
   // Al abrir, precarga los valores de la tarea (edición) o los por defecto (nueva).
@@ -467,10 +486,11 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
     if (tarea) {
       setNombre(tarea.nombre || '')
       setPuntos(tarea.puntos || 10)
-      setRecurrente(tarea.periodicidadDias != null)
       setDias(tarea.periodicidadDias ?? 7)
+      setDiaSemana(tarea.diaSemana ?? new Date().getDay())
+      setModo(tarea.diaSemana != null ? 'semana' : tarea.periodicidadDias != null ? 'dias' : 'unaVez')
     } else {
-      setNombre(''); setPuntos(10); setRecurrente(false); setDias(7)
+      setNombre(''); setPuntos(10); setModo('unaVez'); setDias(7); setDiaSemana(new Date().getDay())
     }
   }, [abierto, tarea])
 
@@ -482,7 +502,8 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
       await onGuardar({
         nombre: nombre.trim(),
         puntos: Number(puntos) || 0,
-        periodicidadDias: recurrente ? Number(dias) || 1 : null,
+        periodicidadDias: modo === 'dias' ? Number(dias) || 1 : null,
+        diaSemana: modo === 'semana' ? diaSemana : null,
       })
     } finally {
       setEnviando(false)
@@ -505,19 +526,40 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
         <div>
           <label className="etiqueta">{t('tareas.periodicidad')}</label>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setRecurrente(false)} className={`flex-1 rounded-2xl py-3 text-sm font-bold ${!recurrente ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+            <button type="button" onClick={() => setModo('unaVez')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'unaVez' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
               {t('tareas.unaVezBtn')}
             </button>
-            <button type="button" onClick={() => setRecurrente(true)} className={`flex-1 rounded-2xl py-3 text-sm font-bold ${recurrente ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+            <button type="button" onClick={() => setModo('dias')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'dias' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
               {t('tareas.recurrente')}
+            </button>
+            <button type="button" onClick={() => setModo('semana')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'semana' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+              {t('tareas.modoSemana')}
             </button>
           </div>
         </div>
 
-        {recurrente && (
+        {modo === 'dias' && (
           <div>
             <label className="etiqueta">{t('tareas.repetirCada')}</label>
             <input type="number" min="1" max="365" value={dias} onChange={(e) => setDias(e.target.value)} className="input" />
+          </div>
+        )}
+
+        {modo === 'semana' && (
+          <div>
+            <label className="etiqueta">{t('tareas.queDia')}</label>
+            <div className="grid grid-cols-7 gap-1.5">
+              {ORDEN_DIAS.map((val, i) => (
+                <button
+                  type="button"
+                  key={val}
+                  onClick={() => setDiaSemana(val)}
+                  className={`flex aspect-square items-center justify-center rounded-xl text-sm font-bold ${diaSemana === val ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro/60 text-oliva-oscuro'}`}
+                >
+                  {DIAS_SEMANA[idioma][i]}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

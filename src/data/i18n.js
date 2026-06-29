@@ -27,6 +27,11 @@ export const DIAS_SEMANA = {
   es: ['L', 'M', 'X', 'J', 'V', 'S', 'D'],
   ca: ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'],
 }
+// Nombres largos indexados por Date.getDay(): 0=domingo … 6=sábado.
+export const DIAS_SEMANA_LARGO = {
+  es: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  ca: ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte'],
+}
 
 const ES = {
   // App / cabecera
@@ -160,6 +165,12 @@ const ES = {
   'tareas.unaVezBtn': 'Una vez',
   'tareas.recurrente': 'Recurrente',
   'tareas.repetirCada': 'Repetir cada (días)',
+  'tareas.modoSemana': 'Cada semana',
+  'tareas.queDia': '¿Qué día?',
+  'tareas.cadaDiaSemana': 'cada {dia}',
+  'tareas.recurrenteSemana': 'Cada {dia}',
+  'tareas.quedanDias': 'quedan {n} días',
+  'tareas.quedaUnDia': 'queda 1 día',
   'tareas.notaAprobacion': 'La tarea quedará pendiente hasta que tu pareja la apruebe.',
   'tareas.guardando': 'Guardando…',
   'tareas.guardarCambios': 'Guardar cambios',
@@ -327,6 +338,8 @@ const ES = {
   'cal.anualLabel': 'Repetir cada año',
   'cal.anualDesc': 'Aniversarios y fechas que se repiten anualmente',
   'cal.aniversario': 'Aniversario',
+  'cal.quienLabel': '¿De quién?',
+  'cal.pareja': 'Pareja',
   'cal.notasLabel': 'Notas',
   'cal.notasPlaceholder': 'Detalles, lugar…',
   'cal.guardando': 'Guardando…',
@@ -497,6 +510,12 @@ const CA = {
   'tareas.unaVezBtn': 'Un cop',
   'tareas.recurrente': 'Recurrent',
   'tareas.repetirCada': 'Repetir cada (dies)',
+  'tareas.modoSemana': 'Cada setmana',
+  'tareas.queDia': 'Quin dia?',
+  'tareas.cadaDiaSemana': 'cada {dia}',
+  'tareas.recurrenteSemana': 'Cada {dia}',
+  'tareas.quedanDias': 'queden {n} dies',
+  'tareas.quedaUnDia': 'queda 1 dia',
   'tareas.notaAprobacion': 'La tasca quedarà pendent fins que la teva parella l\'aprovi.',
   'tareas.guardando': 'Desant…',
   'tareas.guardarCambios': 'Desar canvis',
@@ -664,6 +683,8 @@ const CA = {
   'cal.anualLabel': 'Repetir cada any',
   'cal.anualDesc': 'Aniversaris i dates que es repeteixen anualment',
   'cal.aniversario': 'Aniversari',
+  'cal.quienLabel': 'De qui?',
+  'cal.pareja': 'Parella',
   'cal.notasLabel': 'Notes',
   'cal.notasPlaceholder': 'Detalls, lloc…',
   'cal.guardando': 'Desant…',
