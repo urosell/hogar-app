@@ -183,11 +183,12 @@ function proximoDiaSemana(diaSemana, incluyeHoy) {
   return Timestamp.fromMillis(d.getTime())
 }
 
-export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos, diaSemana }, uid) {
+export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos, diaSemana, permanente }, uid) {
   return addDoc(tareasCol(hogarId), {
     nombre: nombre.trim(),
     periodicidadDias: periodicidadDias ?? null, // null = definitiva o semanal
     diaSemana: diaSemana ?? null, // 0-6 (cada semana ese día); null = no aplica
+    permanente: permanente ?? false, // true = no desaparece al completarla (varias/día)
     puntos: Number(puntos) || 0,
     estado: 'pendiente_aprobacion',
     creadaPor: uid,
@@ -255,12 +256,13 @@ export async function asignarTarea(hogarId, tareaId, asignadoA) {
 }
 
 // Edita los datos base de una tarea (nombre, puntos, periodicidad, día semanal).
-export async function actualizarTarea(hogarId, tareaId, { nombre, puntos, periodicidadDias, diaSemana }) {
+export async function actualizarTarea(hogarId, tareaId, { nombre, puntos, periodicidadDias, diaSemana, permanente }) {
   await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tareaId), {
     nombre: nombre.trim(),
     puntos: Number(puntos) || 0,
     periodicidadDias: periodicidadDias ?? null,
     diaSemana: diaSemana ?? null,
+    permanente: permanente ?? false,
   })
 }
 
@@ -268,7 +270,15 @@ export async function completarTarea(hogarId, tarea, uid) {
   const ref = doc(db, 'hogares', hogarId, 'tareas', tarea.id)
   const ahora = Timestamp.now()
 
-  if (tarea.diaSemana != null) {
+  if (tarea.permanente) {
+    // Permanente: sigue disponible tras completarla (cosas de varias veces al
+    // día). Solo registra quién/cuándo y suma puntos; no descansa nunca.
+    await updateDoc(ref, {
+      ultimoCompletadoPor: uid,
+      ultimoCompletadoFecha: ahora,
+      proximaAparicion: null,
+    })
+  } else if (tarea.diaSemana != null) {
     // Semanal: reaparece en la próxima ocurrencia de ese día (sin contar hoy).
     await updateDoc(ref, {
       ultimoCompletadoPor: uid,

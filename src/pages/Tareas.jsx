@@ -82,16 +82,21 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
   const [completando, setCompletando] = useState(null) // id de la tarea en transición
   const [festejo, setFestejo] = useState(null) // pop de "+X pts"
 
-  // Una tarea definitiva (periodicidadDias == null) desaparece para siempre:
-  // pedimos confirmación antes. Las recurrentes se completan directas.
+  // Definitiva = una sola vez de verdad (ni recurrente, ni semanal, ni
+  // permanente): al completarla desaparece para siempre, así que confirmamos.
+  function esDefinitiva(tarea) {
+    return tarea.periodicidadDias == null && tarea.diaSemana == null && !tarea.permanente
+  }
+
   function pedirCompletar(tarea) {
-    if (tarea.periodicidadDias == null) setConfirmarDefinitiva(tarea)
+    if (esDefinitiva(tarea)) setConfirmarDefinitiva(tarea)
     else ejecutarCompletar(tarea)
   }
 
   async function ejecutarCompletar(tarea) {
     setConfirmarDefinitiva(null)
-    setCompletando(tarea.id)
+    // Las permanentes no se van: nos saltamos la animación de salida.
+    if (!tarea.permanente) setCompletando(tarea.id)
     setFestejo({ puntos: tarea.puntos, key: Date.now(), uid }) // uid = quien completa/gana
 
     await completarTarea(hogarId, tarea, uid)
@@ -99,7 +104,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       titulo: t('notif.tareaHechaTitulo'),
       cuerpo: t('notif.tareaHechaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: tarea.nombre, puntos: tarea.puntos }),
     })
-    setTimeout(() => setCompletando((id) => (id === tarea.id ? null : id)), 450)
+    if (!tarea.permanente) setTimeout(() => setCompletando((id) => (id === tarea.id ? null : id)), 450)
     setTimeout(() => setFestejo(null), 900)
   }
 
@@ -405,7 +410,9 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
           <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
-          {tarea.diaSemana != null ? (
+          {tarea.permanente ? (
+            <span className="chip bg-crema-oscuro text-oliva-oscuro">♾️ {t('tareas.siempre')}</span>
+          ) : tarea.diaSemana != null ? (
             <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDiaSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })}</span>
           ) : tarea.periodicidadDias != null ? (
             <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDias', { n: tarea.periodicidadDias })}</span>
@@ -441,11 +448,13 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
         <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
       </div>
       <p className="mt-1.5 text-xs text-oliva-oscuro">
-        {tarea.diaSemana != null
-          ? t('tareas.recurrenteSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })
-          : tarea.periodicidadDias != null
-            ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias })
-            : t('tareas.unaSolaVez')}
+        {tarea.permanente
+          ? t('tareas.recurrentePermanente')
+          : tarea.diaSemana != null
+            ? t('tareas.recurrenteSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })
+            : tarea.periodicidadDias != null
+              ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias })
+              : t('tareas.unaSolaVez')}
         {creador && ` · ${t('tareas.propuestaPor', { icono: creador.icono, nombre: creador.nombre })}`}
       </p>
       {esMia ? (
@@ -488,7 +497,7 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
       setPuntos(tarea.puntos || 10)
       setDias(tarea.periodicidadDias ?? 7)
       setDiaSemana(tarea.diaSemana ?? new Date().getDay())
-      setModo(tarea.diaSemana != null ? 'semana' : tarea.periodicidadDias != null ? 'dias' : 'unaVez')
+      setModo(tarea.permanente ? 'permanente' : tarea.diaSemana != null ? 'semana' : tarea.periodicidadDias != null ? 'dias' : 'unaVez')
     } else {
       setNombre(''); setPuntos(10); setModo('unaVez'); setDias(7); setDiaSemana(new Date().getDay())
     }
@@ -504,6 +513,7 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
         puntos: Number(puntos) || 0,
         periodicidadDias: modo === 'dias' ? Number(dias) || 1 : null,
         diaSemana: modo === 'semana' ? diaSemana : null,
+        permanente: modo === 'permanente',
       })
     } finally {
       setEnviando(false)
@@ -525,17 +535,25 @@ function TareaModal({ abierto, onCerrar, onGuardar, tarea }) {
 
         <div>
           <label className="etiqueta">{t('tareas.periodicidad')}</label>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setModo('unaVez')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'unaVez' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setModo('unaVez')} className={`rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'unaVez' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
               {t('tareas.unaVezBtn')}
             </button>
-            <button type="button" onClick={() => setModo('dias')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'dias' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+            <button type="button" onClick={() => setModo('dias')} className={`rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'dias' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
               {t('tareas.recurrente')}
             </button>
-            <button type="button" onClick={() => setModo('semana')} className={`flex-1 rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'semana' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+            <button type="button" onClick={() => setModo('semana')} className={`rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'semana' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
               {t('tareas.modoSemana')}
             </button>
+            <button type="button" onClick={() => setModo('permanente')} className={`rounded-2xl px-1 py-3 text-sm font-bold ${modo === 'permanente' ? 'bg-oliva text-crema-claro' : 'bg-crema-oscuro text-oliva-oscuro'}`}>
+              ♾️ {t('tareas.permanenteBtn')}
+            </button>
           </div>
+          {modo === 'permanente' && (
+            <p className="mt-2 rounded-xl bg-crema-oscuro/60 px-3 py-2 text-xs text-oliva-oscuro/80">
+              {t('tareas.permanenteNota')}
+            </p>
+          )}
         </div>
 
         {modo === 'dias' && (
