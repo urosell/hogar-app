@@ -43,7 +43,9 @@ export default function App() {
   useEffect(() => {
     let unsub = () => {}
     escucharMensajesPrimerPlano((payload) => {
-      const n = payload?.notification
+      // Los mensajes ahora son data-only, así que el texto viene en `data`
+      // (con fallback a `notification` por compatibilidad).
+      const n = payload?.notification || payload?.data
       if (n) setAviso({ titulo: n.title, cuerpo: n.body })
     }).then((u) => (unsub = u))
     return () => unsub()

@@ -79,8 +79,14 @@ export default {
         body: JSON.stringify({
           message: {
             token,
-            notification: { title, body: mensaje || '' },
-            webpush: { fcmOptions: { link: link || '/' } },
+            // Mensaje DATA-only (sin bloque `notification`): así el SDK de FCM
+            // no auto-pinta el aviso y solo lo muestra nuestro onBackgroundMessage
+            // (en el SW). Con `notification` salían DOS avisos por mensaje.
+            data: { title, body: mensaje || '', link: link || '/' },
+            webpush: {
+              headers: { Urgency: 'high' },
+              fcmOptions: { link: link || '/' },
+            },
           },
         }),
       })
