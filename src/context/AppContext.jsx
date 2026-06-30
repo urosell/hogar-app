@@ -5,7 +5,9 @@ import {
   escucharUsuario,
   escucharHogar,
   escucharMiembros,
+  guardarTokenFcm,
 } from '../firebase/firebaseService'
+import { refrescarTokenFcm } from '../firebase/messaging'
 
 const AppContext = createContext(null)
 
@@ -47,6 +49,16 @@ export function AppProvider({ children }) {
       setCargandoUsuario(false)
     })
     return unsub
+  }, [authUser])
+
+  // 2b. Refresca y persiste el token FCM al entrar (si el permiso ya está
+  // concedido). Auto-sana tokens caducados y recupera el del nuevo scope sin
+  // que el usuario tenga que volver a pulsar "Activar push".
+  useEffect(() => {
+    if (!authUser) return
+    refrescarTokenFcm().then((token) => {
+      if (token) guardarTokenFcm(authUser.uid, token)
+    })
   }, [authUser])
 
   // 3. Hogar + miembros en tiempo real

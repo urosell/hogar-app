@@ -31,6 +31,15 @@ function urlSwFcm() {
   return `${base}firebase-messaging-sw.js?${params.toString()}`
 }
 
+// Scope DEDICADO para el SW de FCM, distinto del de la PWA (que ocupa `base`).
+// Si ambos comparten scope se pisan y solo uno queda activo: cuando gana el de
+// la PWA, los pushes llegan pero NADIE los muestra (se pierden en silencio).
+// Es el mismo patrón que usa el SDK de FCM por defecto.
+function scopeFcm() {
+  const base = import.meta.env.BASE_URL || '/'
+  return `${base}firebase-cloud-messaging-push-scope`
+}
+
 let messagingPromise = null
 async function obtenerMessaging() {
   if (messagingPromise) return messagingPromise
@@ -79,11 +88,36 @@ export async function registrarSwFcm() {
   if (!('serviceWorker' in navigator)) return null
   if (regFcm) return regFcm
   try {
-    regFcm = await navigator.serviceWorker.register(urlSwFcm())
+    regFcm = await navigator.serviceWorker.register(urlSwFcm(), { scope: scopeFcm() })
     return regFcm
   } catch (e) {
     // eslint-disable-next-line no-console
     console.warn('[Hogar] No se pudo registrar el SW de FCM:', e)
+    return null
+  }
+}
+
+// Refresca el token FCM SIN pedir permiso (solo si ya está concedido) y lo
+// devuelve. Se usa al arrancar la app para: (a) recuperar el token del nuevo
+// scope sin que el usuario re-pulse nada, y (b) auto-sanar tokens caducados,
+// que de otro modo romperían las notificaciones para siempre.
+export async function refrescarTokenFcm() {
+  if (!notificacionesSoportadas() || !VAPID_KEY) return null
+  if (Notification.permission !== 'granted') return null
+
+  const messaging = await obtenerMessaging()
+  if (!messaging) return null
+
+  const swReg = await registrarSwFcm()
+  try {
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg || undefined,
+    })
+    return token || null
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[Hogar] No se pudo refrescar el token FCM:', e)
     return null
   }
 }

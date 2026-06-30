@@ -20,12 +20,14 @@ if (firebaseConfig.projectId) {
   const messaging = firebase.messaging()
 
   messaging.onBackgroundMessage((payload) => {
-    const titulo = payload.notification?.title || 'Hogar'
+    const n = payload.notification || {}
+    const d = payload.data || {}
+    const titulo = n.title || d.title || 'Hogar'
     const opciones = {
-      body: payload.notification?.body || '',
+      body: n.body || d.body || '',
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',
-      data: payload.data || {},
+      data: d,
     }
     self.registration.showNotification(titulo, opciones)
   })
