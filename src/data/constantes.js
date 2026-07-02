@@ -55,6 +55,13 @@ export const NIVELES = [
   { nombre: 'Bosque', emoji: '🌲🌲', min: 1500 },
 ]
 
+// Monedero disponible para gastar en el marketplace.
+// = puntos acumulados (histórico, = nivel) − puntos ya gastados en canjes.
+// El histórico NUNCA decrece (marca el nivel); el disponible sí baja al canjear.
+export function monederoDisponible(usuario) {
+  return (usuario?.puntos || 0) - (usuario?.puntosGastados || 0)
+}
+
 // Devuelve el nivel actual, el siguiente y el progreso (0–1) hacia él.
 export function nivelDesdePuntos(puntos = 0) {
   let idx = 0

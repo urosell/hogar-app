@@ -245,6 +245,13 @@ export async function reactivarTarea(hogarId, tarea) {
     const snap = await getDoc(refUsuario(quien))
     const actual = snap.exists() ? snap.data().puntos || 0 : 0
     await updateDoc(refUsuario(quien), { puntos: Math.max(0, actual - puntos) })
+    // Movimiento negativo: deshace los puntos otorgados al completarla.
+    await registrarMovimiento(hogarId, {
+      tipo: 'tarea',
+      uid: quien,
+      concepto: tarea.nombre,
+      puntos: -puntos,
+    })
   }
 }
 
@@ -308,6 +315,42 @@ export async function completarTarea(hogarId, tarea, uid) {
   }
   // Suma los puntos al usuario.
   await updateDoc(refUsuario(uid), { puntos: increment(tarea.puntos || 0) })
+  // Registra el movimiento en el ledger (histórico de actividad).
+  await registrarMovimiento(hogarId, {
+    tipo: 'tarea',
+    uid,
+    concepto: tarea.nombre,
+    puntos: Number(tarea.puntos) || 0,
+  })
+}
+
+// ─────────────────────────── Ledger de movimientos ───────────────────────
+// Registro inmutable de cada cambio de puntos (tareas completadas y canjes).
+// Alimenta la "actividad reciente" y, en el futuro, gráficas de evolución.
+// `puntos` va CON SIGNO: +N al ganar (tarea), −N al gastar (canje) o deshacer.
+// Solo captura desde su implementación en adelante (lo pasado no se registró).
+
+function movimientosCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'movimientos')
+}
+
+export function registrarMovimiento(hogarId, { tipo, uid, concepto, icono = null, puntos }) {
+  return addDoc(movimientosCol(hogarId), {
+    tipo,                         // 'tarea' | 'canje'
+    uid,                          // quién lo generó
+    concepto: (concepto || '').trim(),
+    icono,                        // emoji (canjes); las tareas usan icono por tipo en la UI
+    puntos: Number(puntos) || 0,  // con signo
+    fecha: serverTimestamp(),
+  })
+}
+
+// Últimos movimientos del hogar, más nuevos primero (orderBy simple, sin índice compuesto).
+export function escucharMovimientos(hogarId, cb, max = 40) {
+  const q = query(movimientosCol(hogarId), orderBy('fecha', 'desc'), limit(max))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
 }
 
 // ──────────────────────────── Lista de la compra ─────────────────────────
@@ -489,6 +532,16 @@ export async function canjearRecompensa(hogarId, recompensa, uid) {
     cumplidoEn: null,
   })
   batch.update(refUsuario(uid), { puntosGastados: increment(Number(recompensa.precio) || 0) })
+  // Movimiento del ledger (atómico con el canje): puntos gastados en negativo.
+  const movRef = doc(movimientosCol(hogarId))
+  batch.set(movRef, {
+    tipo: 'canje',
+    uid,
+    concepto: (recompensa.nombre || '').trim(),
+    icono: recompensa.icono || '🎁',
+    puntos: -(Number(recompensa.precio) || 0),
+    fecha: serverTimestamp(),
+  })
   if (recompensa.tipo === 'una_vez') {
     batch.update(doc(db, 'hogares', hogarId, 'recompensas', recompensa.id), { activa: false })
   }

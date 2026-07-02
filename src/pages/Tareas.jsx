@@ -12,7 +12,7 @@ import {
   reactivarTarea,
 } from '../firebase/firebaseService'
 import { enviarPush } from '../firebase/push'
-import { nivelDesdePuntos } from '../data/constantes'
+import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
 import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
@@ -337,58 +337,142 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
 
 function BarraPuntos({ miembros, uidActual, festejo }) {
   const { t } = useIdioma()
+  const [detalle, setDetalle] = useState(null) // miembro con el popup de progresión abierto
   const ordenados = [...miembros].sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
+  // Versión "viva" del miembro seleccionado (se refresca si cambian sus puntos con el popup abierto).
+  const detalleVivo = detalle ? miembros.find((m) => m.id === detalle.id) : null
   return (
-    <div className="tarjeta flex items-stretch justify-around gap-2">
-      {ordenados.map((m) => {
-        const nivel = nivelDesdePuntos(m.puntos || 0)
-        const esActual = m.id === uidActual
-        const festeja = festejo?.uid === m.id
-        return (
-          <div key={m.id} className="relative flex flex-1 flex-col items-center gap-1.5">
-            {/* Pop de "+X pts" sobre quien completa la tarea */}
-            {festeja && (
-              <span
-                key={festejo.key}
-                className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-oliva px-2.5 py-1 text-sm font-bold text-crema-claro shadow-tarjeta"
-              >
-                +{festejo.puntos} pts
-              </span>
-            )}
-            <div
-              className={`flex h-14 w-14 items-center justify-center rounded-full bg-crema-oscuro text-3xl ${
-                esActual ? 'ring-2 ring-oliva' : ''
-              }`}
+    <>
+      <div className="tarjeta flex items-stretch justify-around gap-2">
+        {ordenados.map((m) => {
+          const nivel = nivelDesdePuntos(m.puntos || 0)
+          const disp = monederoDisponible(m)
+          const esActual = m.id === uidActual
+          const festeja = festejo?.uid === m.id
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setDetalle(m)}
+              className="relative flex flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1 transition-transform active:scale-95"
+              aria-label={t('tareas.verProgresion', { nombre: m.nombre || '—' })}
             >
-              {m.icono || '🙂'}
-            </div>
-            <p className="text-sm font-bold text-bosque">{m.nombre || '—'}</p>
-            <p className={`text-xl font-extrabold text-oliva ${festeja ? 'late' : ''}`}>
-              {m.puntos || 0} <span className="text-xs font-bold">pts</span>
-            </p>
-            <span
-              className="rounded-full bg-crema-oscuro px-2.5 py-0.5 text-[11px] font-bold text-oliva-oscuro"
-              title={nivel.siguiente ? t('tareas.faltanPts', { n: nivel.faltan, nivel: t('nivel.' + nivel.siguiente.nombre) }) : t('tareas.nivelMaximo')}
-            >
-              {nivel.actual.emoji} Nv.{nivel.nivel}
-            </span>
-            <div className="h-1.5 w-full max-w-[5.5rem] overflow-hidden rounded-full bg-crema-oscuro">
+              {/* Pop de "+X pts" sobre quien completa la tarea */}
+              {festeja && (
+                <span
+                  key={festejo.key}
+                  className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-oliva px-2.5 py-1 text-sm font-bold text-crema-claro shadow-tarjeta"
+                >
+                  +{festejo.puntos} pts
+                </span>
+              )}
               <div
-                className="h-full rounded-full bg-oliva transition-all duration-500"
-                style={{ width: `${Math.round(nivel.progreso * 100)}%` }}
-              />
+                className={`flex h-14 w-14 items-center justify-center rounded-full bg-crema-oscuro text-3xl ${
+                  esActual ? 'ring-2 ring-oliva' : ''
+                }`}
+              >
+                {m.icono || '🙂'}
+              </div>
+              <p className="text-sm font-bold text-bosque">{m.nombre || '—'}</p>
+              <p className={`text-xl font-extrabold text-oliva leading-none ${festeja ? 'late' : ''}`}>
+                {m.puntos || 0} <span className="text-xs font-bold">pts</span>
+              </p>
+              <p className="text-[11px] font-bold text-oliva-oscuro/70">
+                💰 {disp} {t('tareas.disp')}
+              </p>
+              <span className="rounded-full bg-crema-oscuro px-2.5 py-0.5 text-[11px] font-bold text-oliva-oscuro">
+                {nivel.actual.emoji} Nv.{nivel.nivel}
+              </span>
+              <div className="h-1.5 w-full max-w-[5.5rem] overflow-hidden rounded-full bg-crema-oscuro">
+                <div
+                  className="h-full rounded-full bg-oliva transition-all duration-500"
+                  style={{ width: `${Math.round(nivel.progreso * 100)}%` }}
+                />
+              </div>
+            </button>
+          )
+        })}
+        {miembros.length < 2 && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 opacity-60">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-crema-oscuro text-2xl text-oliva-oscuro">
+              ➕
             </div>
+            <p className="text-xs font-bold text-oliva-oscuro">{t('tareas.esperando')}</p>
           </div>
-        )
-      })}
-      {miembros.length < 2 && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 opacity-60">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-crema-oscuro text-2xl text-oliva-oscuro">
-            ➕
-          </div>
-          <p className="text-xs font-bold text-oliva-oscuro">{t('tareas.esperando')}</p>
+        )}
+      </div>
+
+      {/* Popup de progresión de puntos de un miembro */}
+      <Modal abierto={!!detalleVivo} onCerrar={() => setDetalle(null)}>
+        {detalleVivo && <DetalleMiembro miembro={detalleVivo} />}
+      </Modal>
+    </>
+  )
+}
+
+// Popup con la "foto" de puntos de un miembro: monedero disponible, histórico,
+// gastado y nivel con progreso. Explica de un vistazo por qué el disponible < histórico.
+function DetalleMiembro({ miembro }) {
+  const { t } = useIdioma()
+  const nivel = nivelDesdePuntos(miembro.puntos || 0)
+  const historico = miembro.puntos || 0
+  const gastados = miembro.puntosGastados || 0
+  const disp = monederoDisponible(miembro)
+  return (
+    <div className="space-y-4">
+      {/* Cabecera: avatar, nombre y nivel */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-crema-oscuro text-4xl">
+          {miembro.icono || '🙂'}
         </div>
-      )}
+        <div>
+          <h2 className="text-xl font-bold text-bosque">{miembro.nombre || '—'}</h2>
+          <p className="text-sm text-oliva-oscuro/70">
+            {nivel.actual.emoji} {t('nivel.' + nivel.actual.nombre)} · {t('tareas.nivelN', { n: nivel.nivel })}
+          </p>
+        </div>
+      </div>
+
+      {/* Monedero disponible (lo accionable para el marketplace) */}
+      <div className="rounded-2xl bg-oliva/10 px-4 py-3 text-center">
+        <p className="text-xs font-bold text-oliva-oscuro/70">💰 {t('tareas.detDisponibles')}</p>
+        <p className="text-3xl font-extrabold text-oliva">
+          {disp} <span className="text-base font-bold">pts</span>
+        </p>
+      </div>
+
+      {/* Desglose: histórico total y gastado (histórico − gastado = disponible) */}
+      <div className="flex gap-2">
+        <div className="flex-1 rounded-2xl bg-crema-claro px-3 py-2.5 text-center">
+          <p className="text-xs font-bold text-oliva-oscuro/70">🏆 {t('tareas.detHistorico')}</p>
+          <p className="text-xl font-extrabold text-bosque">{historico}</p>
+        </div>
+        <div className="flex-1 rounded-2xl bg-crema-claro px-3 py-2.5 text-center">
+          <p className="text-xs font-bold text-oliva-oscuro/70">🎁 {t('tareas.detGastados')}</p>
+          <p className="text-xl font-extrabold text-marron">{gastados}</p>
+        </div>
+      </div>
+
+      {/* Nivel y progreso hacia el siguiente */}
+      <div>
+        <div className="mb-1 flex items-center justify-between text-xs font-bold text-oliva-oscuro/70">
+          <span>{nivel.actual.emoji} {t('nivel.' + nivel.actual.nombre)}</span>
+          {nivel.siguiente && (
+            <span>{nivel.siguiente.emoji} {t('nivel.' + nivel.siguiente.nombre)}</span>
+          )}
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-crema-oscuro">
+          <div
+            className="h-full rounded-full bg-oliva transition-all duration-500"
+            style={{ width: `${Math.round(nivel.progreso * 100)}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-center text-xs text-oliva-oscuro/70">
+          {nivel.siguiente
+            ? t('tareas.faltanPts', { n: nivel.faltan, nivel: t('nivel.' + nivel.siguiente.nombre) })
+            : t('tareas.nivelMaximo')}
+        </p>
+      </div>
     </div>
   )
 }

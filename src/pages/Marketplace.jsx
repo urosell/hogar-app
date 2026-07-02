@@ -10,7 +10,7 @@ import {
   eliminarRecompensa,
 } from '../firebase/firebaseService'
 import { enviarPush } from '../firebase/push'
-import { ICONOS_RECOMPENSA } from '../data/constantes'
+import { ICONOS_RECOMPENSA, monederoDisponible } from '../data/constantes'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
@@ -44,7 +44,7 @@ export default function Marketplace() {
   const porUid = useMemo(() => Object.fromEntries(miembros.map((m) => [m.id, m])), [miembros])
 
   // Monedero disponible = acumulado (nivel) − gastado en canjes.
-  const disponibles = (usuario?.puntos || 0) - (usuario?.puntosGastados || 0)
+  const disponibles = monederoDisponible(usuario)
 
   const catalogo = useMemo(
     () => [...recompensas].sort((a, b) => (a.precio || 0) - (b.precio || 0)),

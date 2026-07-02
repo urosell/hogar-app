@@ -83,6 +83,34 @@ export function Vacio({ emoji = '🌱', titulo, texto }) {
   )
 }
 
+// Una fila del histórico de movimientos de puntos (tareas ganadas y canjes).
+// `mov` = { tipo:'tarea'|'canje', concepto, icono, puntos (con signo), fecha }.
+export function MovimientoRow({ mov, quien }) {
+  const { idioma } = useIdioma()
+  const puntos = mov.puntos || 0
+  const positivo = puntos >= 0
+  const icono = mov.tipo === 'canje' ? (mov.icono || '🎁') : '✅'
+  const fecha = mov.fecha?.toDate?.()
+  const locale = idioma === 'ca' ? 'ca-ES' : 'es-ES'
+  const cuando = fecha
+    ? `${fecha.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} · ${fecha.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`
+    : ''
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-crema-claro/60 px-3 py-2.5">
+      <span className="text-2xl">{icono}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-bosque">
+          {quien?.icono || '🙂'} {quien?.nombre || '—'} · {mov.concepto || '—'}
+        </p>
+        {cuando && <p className="text-xs text-oliva-oscuro/50">{cuando}</p>}
+      </div>
+      <span className={`shrink-0 text-sm font-extrabold ${positivo ? 'text-oliva' : 'text-marron'}`}>
+        {positivo ? '+' : ''}{puntos}
+      </span>
+    </div>
+  )
+}
+
 // ─── Iconos (SVG con currentColor) ───
 const ic = 'h-6 w-6'
 export function IconoTareas({ className = ic }) {
@@ -223,6 +251,15 @@ export function IconoCandado({ className = ic }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+export function IconoHistorial({ className = ic }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v5h5" />
+      <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+      <path d="M12 7v5l4 2" />
     </svg>
   )
 }

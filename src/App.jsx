@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useApp } from './context/AppContext'
 import { firebaseConfigurado } from './firebase/config'
 import { escucharMensajesPrimerPlano } from './firebase/messaging'
-import { Cargando, IconoAjustes, IconoSol, IconoLuna, IconoCampana } from './components/ui'
+import { escucharMovimientos } from './firebase/firebaseService'
+import { Cargando, Vacio, Modal, MovimientoRow, IconoAjustes, IconoSol, IconoLuna, IconoCampana, IconoHistorial } from './components/ui'
 import { useTheme } from './context/ThemeContext'
 import { useIdioma } from './context/IdiomaContext'
 import BottomNav from './components/BottomNav'
@@ -19,7 +20,7 @@ import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
 export default function App() {
-  const { cargando, authUser, tieneHogar, perfilCompleto, usuario } = useApp()
+  const { cargando, authUser, tieneHogar, perfilCompleto, usuario, hogarId, miembros } = useApp()
   const { theme, toggle } = useTheme()
   const { t } = useIdioma()
   const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), calendario: t('titulo.calendario'), marketplace: t('titulo.marketplace') }
@@ -29,6 +30,11 @@ export default function App() {
   const [pendientesAprobar, setPendientesAprobar] = useState(0)
   const [ajustesAbierto, setAjustesAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
+  const [movimientos, setMovimientos] = useState([]) // ledger de actividad del hogar
+  const [historialAbierto, setHistorialAbierto] = useState(false)
+
+  // Mapa uid → miembro, para pintar quién hizo cada movimiento.
+  const porUid = Object.fromEntries((miembros || []).map((m) => [m.id, m]))
 
   // Orden visual de los tabs (igual que en la barra inferior). La dirección
   // del deslizamiento depende de si la nueva pestaña está a la derecha o izq.
@@ -57,6 +63,12 @@ export default function App() {
     return () => clearTimeout(t)
   }, [aviso])
 
+  // Ledger de actividad del hogar (histórico de puntos: tareas y canjes).
+  useEffect(() => {
+    if (!hogarId) return
+    return escucharMovimientos(hogarId, setMovimientos)
+  }, [hogarId])
+
   if (!firebaseConfigurado) return <AvisoConfig />
   if (cargando) return <Cargando texto={t('app.entrando')} />
   if (!authUser) return <Login />
@@ -72,6 +84,13 @@ export default function App() {
       >
         <h1 className="text-2xl font-bold text-bosque">{TITULOS[tab]}</h1>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setHistorialAbierto(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            aria-label={t('tareas.actividad')}
+          >
+            <IconoHistorial />
+          </button>
           <button
             onClick={() => {
               const enAprobar = tab === 'tareas' && seccionTareas === 'aprobar'
@@ -130,6 +149,19 @@ export default function App() {
       <BottomNav activo={tab} onCambiar={cambiarTab} />
 
       <Ajustes abierto={ajustesAbierto} onCerrar={() => setAjustesAbierto(false)} />
+
+      {/* Popup con el histórico de movimientos de puntos del hogar */}
+      <Modal abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} titulo={t('tareas.actividad')}>
+        {movimientos.length === 0 ? (
+          <Vacio emoji="📜" titulo={t('tareas.actividadVacia')} />
+        ) : (
+          <div className="space-y-2">
+            {movimientos.map((m) => (
+              <MovimientoRow key={m.id} mov={m} quien={porUid[m.uid]} />
+            ))}
+          </div>
+        )}
+      </Modal>
 
       {/* Banner de notificación en primer plano */}
       {aviso && (

@@ -182,6 +182,14 @@ const ES = {
   'tareas.faltanPts': 'Faltan {n} pts para {nivel}',
   'tareas.nivelMaximo': '¡Nivel máximo!',
   'tareas.esperando': 'Esperando…',
+  'tareas.disp': 'disp.',
+  'tareas.verProgresion': 'Ver progresión de {nombre}',
+  'tareas.nivelN': 'Nivel {n}',
+  'tareas.detDisponibles': 'Disponibles para gastar',
+  'tareas.detHistorico': 'Ganados (total)',
+  'tareas.detGastados': 'Gastados',
+  'tareas.actividad': 'Actividad reciente',
+  'tareas.actividadVacia': 'Aún no hay actividad',
 
   // Notificaciones (las genera el dispositivo emisor, en su idioma)
   'notif.tareaHechaTitulo': '✅ Tarea completada',
@@ -531,6 +539,14 @@ const CA = {
   'tareas.faltanPts': 'Falten {n} pts per a {nivel}',
   'tareas.nivelMaximo': 'Nivell màxim!',
   'tareas.esperando': 'Esperant…',
+  'tareas.disp': 'disp.',
+  'tareas.verProgresion': 'Veure progressió de {nombre}',
+  'tareas.nivelN': 'Nivell {n}',
+  'tareas.detDisponibles': 'Disponibles per gastar',
+  'tareas.detHistorico': 'Guanyats (total)',
+  'tareas.detGastados': 'Gastats',
+  'tareas.actividad': 'Activitat recent',
+  'tareas.actividadVacia': 'Encara no hi ha activitat',
 
   // Notificaciones
   'notif.tareaHechaTitulo': '✅ Tasca completada',
