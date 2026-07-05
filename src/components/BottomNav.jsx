@@ -1,4 +1,4 @@
-import { IconoCasa, IconoCompra, IconoGym, IconoRegalo, IconoProyectos, IconoCalendario } from './ui'
+import { IconoCasa, IconoCompra, IconoGym, IconoRegalo, IconoProyectos, IconoCalendario, IconoAlarma } from './ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 // Tareas (casa) va primera y un poco más grande que el resto.
@@ -8,6 +8,7 @@ const TABS = [
   { id: 'gym', clave: 'nav.gym', Icono: IconoGym },
   { id: 'proyectos', clave: 'nav.proyectos', Icono: IconoProyectos },
   { id: 'calendario', clave: 'nav.calendario', Icono: IconoCalendario },
+  { id: 'recordatorios', clave: 'nav.recordatorios', Icono: IconoAlarma },
   { id: 'marketplace', clave: 'nav.marketplace', Icono: IconoRegalo },
 ]
 

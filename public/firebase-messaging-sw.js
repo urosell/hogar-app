@@ -29,6 +29,21 @@ if (firebaseConfig.projectId) {
       badge: './icons/icon-192.png',
       data: d,
     }
+    // Recordatorios: el aviso se re-envía; con un `tag` fijo cada nuevo aviso
+    // REEMPLAZA al anterior (no se apilan) y `renotify` hace que vuelva a sonar.
+    if (d.tag) {
+      opciones.tag = d.tag
+      opciones.renotify = true
+    }
+    // En Android mantiene el aviso fijo hasta que se interactúa (iOS lo ignora).
+    if (d.requireInteraction === '1') opciones.requireInteraction = true
+
+    // Badge en el icono de la app (globito): señal silenciosa que persiste hasta
+    // confirmar. Soportado en PWA instalada (iOS 16.4+ / Android).
+    if (d.badge && 'setAppBadge' in self.navigator) {
+      self.navigator.setAppBadge(Number(d.badge) || 1).catch(() => {})
+    }
+
     self.registration.showNotification(titulo, opciones)
   })
 }

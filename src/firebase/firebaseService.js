@@ -745,6 +745,92 @@ export function claveFecha(date) {
   return `${y}-${m}-${d}`
 }
 
+// ────────────────────────────── Recordatorios ────────────────────────────
+// Recordatorios tipo "alarma": a una hora fija (local) salta una notificación;
+// si la persona no confirma, un Cron del Cloudflare Worker re-notifica cada
+// `intervaloMin` minutos hasta `maxAvisos` avisos. En el ÚLTIMO aviso, si
+// `avisarPareja`, también se avisa a la otra persona del hogar.
+//
+// El estado del día vive en el propio documento (lo actualiza el Worker):
+//   estadoFecha      "YYYY-MM-DD" al que se refieren los contadores de hoy
+//   avisosEnviados   nº de avisos ya enviados hoy
+//   ultimoAvisoEn    Timestamp del último aviso (para respetar el intervalo)
+//   escaladoEnviado  ya se avisó a la pareja hoy
+//   confirmadoFecha  "YYYY-MM-DD" del último día confirmado → corta los avisos
+//
+// La app solo ESCRIBE la confirmación; el resto lo gestiona el Worker.
+
+function recordatoriosCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'recordatorios')
+}
+
+export async function crearRecordatorio(hogarId, { nombre, mensaje, hora, intervaloMin, maxAvisos, avisarPareja, uid: destinatario }, uid) {
+  return addDoc(recordatoriosCol(hogarId), {
+    nombre: nombre.trim(),
+    mensaje: (mensaje || '').trim(),
+    hora: hora || '09:00',                    // "HH:MM" hora local (Europe/Madrid)
+    intervaloMin: Number(intervaloMin) || 15,
+    maxAvisos: Number(maxAvisos) || 4,
+    avisarPareja: avisarPareja !== false,
+    uid: destinatario || uid,                 // quién recibe los avisos y confirma
+    activa: true,
+    // runtime (lo gestiona el Worker; la confirmación la escribe la app):
+    estadoFecha: null,
+    avisosEnviados: 0,
+    ultimoAvisoEn: null,
+    escaladoEnviado: false,
+    confirmadoFecha: null,
+    creadoPor: uid,
+    creadoEn: serverTimestamp(),
+  })
+}
+
+export async function actualizarRecordatorio(hogarId, id, { nombre, mensaje, hora, intervaloMin, maxAvisos, avisarPareja, uid: destinatario }) {
+  const cambios = {
+    nombre: nombre.trim(),
+    mensaje: (mensaje || '').trim(),
+    hora: hora || '09:00',
+    intervaloMin: Number(intervaloMin) || 15,
+    maxAvisos: Number(maxAvisos) || 4,
+    avisarPareja: avisarPareja !== false,
+  }
+  if (destinatario) cambios.uid = destinatario
+  await updateDoc(doc(db, 'hogares', hogarId, 'recordatorios', id), cambios)
+}
+
+export async function eliminarRecordatorio(hogarId, id) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'recordatorios', id))
+}
+
+export async function alternarRecordatorioActivo(hogarId, id, activa) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'recordatorios', id), { activa: !!activa })
+}
+
+// La persona marca que ya lo ha hecho hoy → corta las re-notificaciones del día.
+export async function confirmarRecordatorio(hogarId, id, fechaClave) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'recordatorios', id), {
+    confirmadoFecha: fechaClave,
+    confirmadoEn: serverTimestamp(),
+  })
+}
+
+// Deshace la confirmación de hoy (si se marcó por error).
+export async function desconfirmarRecordatorio(hogarId, id) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'recordatorios', id), {
+    confirmadoFecha: null,
+  })
+}
+
+export function escucharRecordatorios(hogarId, cb) {
+  // Ordenados por hora (campo simple, sin índice compuesto).
+  const q = query(recordatoriosCol(hogarId), orderBy('hora', 'asc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+// ─────────────────────────────────── Gym ─────────────────────────────────
+
 export async function alternarGym(hogarId, fechaClave, uid, asistio) {
   const ref = doc(db, 'hogares', hogarId, 'gym', fechaClave)
   if (asistio) {

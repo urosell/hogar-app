@@ -5,3 +5,9 @@ compatibility_date = "2024-09-01"
 # Los secrets NO van aquí (se suben con `wrangler secret put`):
 #   SERVICE_ACCOUNT  → JSON de la service account de Firebase
 #   PUSH_SECRET      → cadena compartida con el cliente (VITE_PUSH_SECRET)
+
+# Cron: cada 5 min revisa los recordatorios y envía los avisos que tocan.
+# (La service account necesita, además del scope de FCM, el de Firestore
+#  —datastore—; ya lo pide el propio Worker con las mismas credenciales.)
+[triggers]
+crons = ["*/5 * * * *"]

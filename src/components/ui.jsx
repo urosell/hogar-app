@@ -254,6 +254,18 @@ export function IconoCandado({ className = ic }) {
     </svg>
   )
 }
+export function IconoAlarma({ className = ic }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2" />
+      <path d="M5 3 2 6" />
+      <path d="M22 6l-3-3" />
+      <path d="M6 19l-2 2" />
+      <path d="M18 19l2 2" />
+    </svg>
+  )
+}
 export function IconoHistorial({ className = ic }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
