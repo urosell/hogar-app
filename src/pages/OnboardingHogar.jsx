@@ -9,6 +9,7 @@ export default function OnboardingHogar() {
   const [modo, setModo] = useState(null) // null | 'crear' | 'unirse'
   const [codigoCreado, setCodigoCreado] = useState(null)
   const [codigoInput, setCodigoInput] = useState('')
+  const [tamano, setTamano] = useState(2) // nº máximo de personas del hogar (2–4)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
 
@@ -16,7 +17,7 @@ export default function OnboardingHogar() {
     setError(null)
     setCargando(true)
     try {
-      const { codigo } = await crearHogar(uid)
+      const { codigo } = await crearHogar(uid, tamano)
       setCodigoCreado(codigo)
       // El AppContext detectará el hogarId y avanzará al perfil automáticamente.
     } catch {
@@ -63,6 +64,29 @@ export default function OnboardingHogar() {
 
       {!codigoCreado && !modo && (
         <div className="flex flex-col gap-3">
+          {/* Nº de personas del hogar (solo al crear uno nuevo) */}
+          <div className="tarjeta">
+            <label className="etiqueta">{t('oh.tamanoLabel')}</label>
+            <div className="flex gap-2">
+              {[2, 3, 4].map((n) => {
+                const sel = tamano === n
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setTamano(n)}
+                    className="flex-1 rounded-full py-2.5 text-sm font-bold transition-colors"
+                    style={sel
+                      ? { backgroundColor: 'rgb(var(--oliva))', color: '#fff' }
+                      : { backgroundColor: 'rgb(var(--crema-oscuro))', color: 'rgb(var(--oliva-oscuro))' }}
+                  >
+                    {t('oh.tamanoN', { n })}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-xs text-oliva-oscuro/60">{t('oh.tamanoAyuda')}</p>
+          </div>
           <button onClick={handleCrear} disabled={cargando} className="btn-primario py-4 text-lg">
             {t('oh.crear')}
           </button>

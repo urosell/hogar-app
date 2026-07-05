@@ -37,3 +37,31 @@ export async function enviarPush(companero, tipo, { titulo, cuerpo }) {
     console.warn('[Hogar] No se pudo enviar el push:', e)
   }
 }
+
+// Manda un push a TODOS los demás miembros del hogar (hogares de 3–4 personas).
+// Junta los tokens de cada compañero que no haya desactivado ese tipo, y hace un
+// solo envío (el Worker acepta una lista de tokens).
+export async function enviarPushHogar(companeros, tipo, { titulo, cuerpo }) {
+  if (!ENDPOINT || !Array.isArray(companeros)) return
+
+  const tokens = []
+  for (const c of companeros) {
+    if (!c) continue
+    const prefs = c.notificaciones || {}
+    if (prefs[tipo] === false) continue // respeta las preferencias de cada uno
+    for (const tk of c.fcmTokens || []) tokens.push(tk)
+  }
+  const unicos = [...new Set(tokens)]
+  if (unicos.length === 0) return
+
+  try {
+    await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: SECRET, tokens: unicos, title: titulo, body: cuerpo, link: '/' }),
+    })
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[Hogar] No se pudo enviar el push al hogar:', e)
+  }
+}

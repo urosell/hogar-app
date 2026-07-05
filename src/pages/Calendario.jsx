@@ -20,7 +20,8 @@ const COLOR_PROYECTO = '#FF7A80' // coral
 const COLOR_GYM = '#5AA9E6' // azul
 const COLOR_PAREJA = '#3DD598' // menta (eventos compartidos)
 // Color por persona, asignado por el orden estable de uids del hogar.
-const COLORES_PERSONA = ['#A78BFA', '#F5A623'] // violeta, ámbar
+// Un color por miembro (hasta 4): violeta, ámbar, menta, rosa.
+const COLORES_PERSONA = ['#A78BFA', '#F5A623', '#3DD598', '#EC4899']
 
 // Devuelve el color de un evento según su dueño ('pareja' o uid de un miembro).
 function colorEvento(quien, ordenUids) {

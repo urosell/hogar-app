@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { escucharGymRango, alternarGym, claveFecha } from '../firebase/firebaseService'
-import { enviarPush } from '../firebase/push'
+import { enviarPushHogar } from '../firebase/push'
 import { Vacio, IconoFlecha, Skeleton, Modal } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 import { MESES_CORTO, MESES_LARGO, DIAS_SEMANA } from '../data/i18n'
@@ -10,7 +10,8 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
 } from 'recharts'
 
-const COLORES = ['#3DD598', '#FFC542'] // miembro 1 (menta), miembro 2 (oro)
+// Un color por miembro (hasta 4): menta, oro, azul, coral.
+const COLORES = ['#3DD598', '#FFC542', '#4A7C9E', '#C2453B']
 
 // "2026-06-12" → "12 de junio de 2026" (según idioma, vía t)
 function fechaBonita(idioma, t, clave) {
@@ -34,7 +35,7 @@ const GRAFICO = {
 }
 
 export default function Gym() {
-  const { hogarId, uid, usuario, miembros, companero } = useApp()
+  const { hogarId, uid, usuario, miembros, companeros } = useApp()
   const { theme } = useTheme()
   const { idioma, t } = useIdioma()
   const g = GRAFICO[theme] || GRAFICO.night
@@ -79,7 +80,7 @@ export default function Gym() {
     const yaFue = asistentesHoy.includes(miembroId)
     await alternarGym(hogarId, hoyClave, miembroId, !yaFue)
     if (!yaFue && miembroId === uid) {
-      enviarPush(companero, 'gym', {
+      enviarPushHogar(companeros, 'gym', {
         titulo: t('notif.gymTitulo'),
         cuerpo: t('notif.gymCuerpo', { nombre: usuario?.nombre || t('notif.tuPareja') }),
       })

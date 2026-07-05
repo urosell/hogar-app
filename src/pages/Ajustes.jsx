@@ -21,7 +21,7 @@ const TIPOS = [
 ]
 
 export default function Ajustes({ abierto, onCerrar }) {
-  const { uid, usuario, hogar, companero } = useApp()
+  const { uid, usuario, hogar, companeros } = useApp()
   const { theme, setTheme } = useTheme()
   const { idioma, setIdioma, t } = useIdioma()
   const [nombre, setNombre] = useState('')
@@ -96,10 +96,14 @@ export default function Ajustes({ abierto, onCerrar }) {
               <p className="text-xs text-oliva-oscuro/60">{t('aj.codigoInvitacion')}</p>
               <p className="select-all text-2xl font-bold tracking-widest text-oliva">{hogar?.codigo || '—'}</p>
             </div>
-            {companero ? (
-              <div className="text-center">
-                <Avatar icono={companero.icono} nombre={companero.nombre} size="md" />
-                <p className="mt-1 text-xs font-bold text-bosque">{companero.nombre}</p>
+            {companeros.length > 0 ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                {companeros.map((c) => (
+                  <div key={c.id} className="text-center">
+                    <Avatar icono={c.icono} nombre={c.nombre} size="md" />
+                    <p className="mt-1 max-w-[4.5rem] truncate text-xs font-bold text-bosque">{c.nombre}</p>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="max-w-[8rem] text-right text-xs text-oliva-oscuro/60">{t('aj.comparteCodigo')}</p>

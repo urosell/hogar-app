@@ -76,11 +76,15 @@ export function AppProvider({ children }) {
     }
   }, [usuario?.hogarId])
 
-  // El "otro" miembro del hogar (para notificaciones, vistas comparadas, etc.).
-  const companero = useMemo(
-    () => miembros.find((m) => m.id !== authUser?.uid) || null,
+  // Los DEMÁS miembros del hogar (todos menos yo). En hogares de 2 es uno solo;
+  // en los de 3–4, varios. Las notificaciones y aprobaciones usan esta lista.
+  const companeros = useMemo(
+    () => (miembros || []).filter((m) => m.id !== authUser?.uid),
     [miembros, authUser]
   )
+  // Compatibilidad: "el otro" (primero de la lista). Úsalo solo donde de verdad
+  // haga falta uno; para avisar al hogar usa `companeros`.
+  const companero = companeros[0] || null
 
   const perfilCompleto = Boolean(usuario?.nombre && usuario?.icono)
   const tieneHogar = Boolean(usuario?.hogarId)
@@ -91,6 +95,7 @@ export function AppProvider({ children }) {
     hogar,
     miembros,
     companero,
+    companeros,
     cargando: cargandoAuth || cargandoUsuario,
     perfilCompleto,
     tieneHogar,

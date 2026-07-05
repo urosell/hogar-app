@@ -29,6 +29,7 @@ import {
   arrayRemove,
   Timestamp,
   writeBatch,
+  runTransaction,
 } from 'firebase/firestore'
 import { auth, db, googleProvider } from './config'
 
@@ -119,14 +120,18 @@ async function codigoLibre(codigo) {
   return snap.empty
 }
 
-export async function crearHogar(uid) {
+export async function crearHogar(uid, maxMiembros = 2) {
   let codigo = generarCodigo()
   // Reintenta en el (improbable) caso de colisión.
   for (let i = 0; i < 5 && !(await codigoLibre(codigo)); i++) codigo = generarCodigo()
 
+  // Límite de personas del hogar (2–4). Hogares creados antes de esta versión
+  // no llevan el campo → se tratan como 2 al leerlos.
+  const limite = Math.min(4, Math.max(2, Number(maxMiembros) || 2))
   const ref = await addDoc(collection(db, 'hogares'), {
     codigo,
     miembros: [uid],
+    maxMiembros: limite,
     creadoPor: uid,
     creadoEn: serverTimestamp(),
   })
@@ -143,7 +148,8 @@ export async function unirseAHogar(uid, codigo) {
 
   const hogar = snap.docs[0]
   const miembros = hogar.data().miembros || []
-  if (!miembros.includes(uid) && miembros.length >= 2) {
+  const maxMiembros = hogar.data().maxMiembros || 2 // hogares antiguos = 2
+  if (!miembros.includes(uid) && miembros.length >= maxMiembros) {
     throw new Error('hogar/lleno')
   }
   await updateDoc(doc(db, 'hogares', hogar.id), { miembros: arrayUnion(uid) })
@@ -192,7 +198,7 @@ export async function crearTarea(hogarId, { nombre, periodicidadDias, puntos, di
     puntos: Number(puntos) || 0,
     estado: 'pendiente_aprobacion',
     creadaPor: uid,
-    aprobadaPor: null,
+    aprobadaPorUids: [], // uids que ya la han aprobado (se activa con la unanimidad)
     asignadoA: null, // uid del miembro responsable, o null = sin asignar
     proximaAparicion: null,
     ultimoCompletadoPor: null,
@@ -210,14 +216,31 @@ export function escucharTareas(hogarId, cb) {
   })
 }
 
-export async function aprobarTarea(hogarId, tarea, uid) {
-  // Una tarea semanal se programa ya a su próximo día (hoy incluido); el resto
-  // queda disponible de inmediato (proximaAparicion = null).
-  const proxima = tarea.diaSemana != null ? proximoDiaSemana(tarea.diaSemana, true) : null
-  await updateDoc(doc(db, 'hogares', hogarId, 'tareas', tarea.id), {
-    estado: 'activa',
-    aprobadaPor: uid,
-    proximaAparicion: proxima,
+// Aprueba una tarea propuesta. Se activa solo cuando la han aprobado TODAS las
+// demás personas del hogar (unanimidad; quien la propuso no cuenta). Va en una
+// transacción para no perder aprobaciones si dos personas aprueban a la vez.
+// `miembrosIds` = ids de los miembros actuales del hogar.
+export async function aprobarTarea(hogarId, tarea, uid, miembrosIds = []) {
+  const ref = doc(db, 'hogares', hogarId, 'tareas', tarea.id)
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) return false
+    const data = snap.data()
+    // Aprobaciones previas (compat con el campo antiguo `aprobadaPor` único).
+    const previas = data.aprobadaPorUids || (data.aprobadaPor ? [data.aprobadaPor] : [])
+    const aprobados = new Set(previas)
+    aprobados.add(uid)
+    // Requeridos = todos los miembros menos quien la propuso.
+    const requeridos = (miembrosIds || []).filter((id) => id !== data.creadaPor)
+    const completo = requeridos.length === 0 || requeridos.every((id) => aprobados.has(id))
+    const cambios = { aprobadaPorUids: [...aprobados] }
+    if (completo) {
+      // Semanal → se programa a su próximo día (hoy incluido); el resto disponible ya.
+      cambios.estado = 'activa'
+      cambios.proximaAparicion = data.diaSemana != null ? proximoDiaSemana(data.diaSemana, true) : null
+    }
+    tx.update(ref, cambios)
+    return completo
   })
 }
 

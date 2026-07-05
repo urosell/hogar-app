@@ -190,21 +190,25 @@ async function procesarRecordatorio(sa, fcmToken, fsToken, hid, miembros, recDoc
     })
   }
 
-  // Escalado a la pareja en el último aviso.
+  // Escalado en el último aviso: se avisa a TODAS las demás personas del hogar
+  // (en hogares de 3–4, no solo a una).
   let nuevoEscalado = escalado
   if (nAviso >= maxAvisos && f.avisarPareja && !escalado) {
-    const parejaUid = miembros.find((u) => u !== f.uid)
-    if (parejaUid) {
-      const parejaUser = await fsGet(sa, fsToken, `usuarios/${parejaUid}`)
-      const parejaTokens = parejaUser ? decode(parejaUser.fields?.fcmTokens) || [] : []
-      if (parejaTokens.length) {
-        await enviarFCM(fcmToken, sa, parejaTokens, {
-          title: plantilla(TXT.parejaTitulo, vars),
-          body: plantilla(TXT.parejaCuerpo, vars),
-          link: '/',
-          tag: `rec-esc-${rid}`,
-        })
-      }
+    const otros = miembros.filter((u) => u !== f.uid)
+    const tokens = []
+    for (const ouid of otros) {
+      const u = await fsGet(sa, fsToken, `usuarios/${ouid}`)
+      const tk = u ? decode(u.fields?.fcmTokens) || [] : []
+      for (const t of tk) tokens.push(t)
+    }
+    const unicos = [...new Set(tokens)]
+    if (unicos.length) {
+      await enviarFCM(fcmToken, sa, unicos, {
+        title: plantilla(TXT.parejaTitulo, vars),
+        body: plantilla(TXT.parejaCuerpo, vars),
+        link: '/',
+        tag: `rec-esc-${rid}`,
+      })
     }
     nuevoEscalado = true
   }

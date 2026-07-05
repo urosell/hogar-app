@@ -11,7 +11,7 @@ import {
   actualizarTarea,
   reactivarTarea,
 } from '../firebase/firebaseService'
-import { enviarPush } from '../firebase/push'
+import { enviarPushHogar } from '../firebase/push'
 import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
 import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
@@ -33,7 +33,7 @@ function textoQuedan(t, n) {
 }
 
 export default function Tareas({ seccion, setSeccion, onPendientes }) {
-  const { hogarId, uid, usuario, miembros, companero } = useApp()
+  const { hogarId, uid, usuario, miembros, companeros } = useApp()
   const { t } = useIdioma()
   const [tareas, setTareas] = useState([])
   const [cargado, setCargado] = useState(false)
@@ -70,9 +70,12 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
     .filter((t) => t.estado === 'activa' && t.proximaAparicion && t.proximaAparicion.toMillis() > limite)
     .sort((a, b) => a.proximaAparicion.toMillis() - b.proximaAparicion.toMillis())
   const pendientes = tareas.filter((t) => t.estado === 'pendiente_aprobacion')
-  // Sin pareja en el hogar no hay quien apruebe: te dejamos aprobar las tuyas.
+  // Solo en el hogar: no hay quien apruebe, te dejamos aprobar las tuyas.
   const solo = miembros.length < 2
-  const porAprobarYo = solo ? pendientes : pendientes.filter((t) => t.creadaPor !== uid)
+  // Me toca aprobar las que no propuse yo y que aún no he aprobado.
+  const porAprobarYo = solo
+    ? pendientes
+    : pendientes.filter((t) => t.creadaPor !== uid && !(t.aprobadaPorUids || []).includes(uid))
 
   // Reporta a App el nº de tareas por aprobar (la campana vive en la cabecera).
   useEffect(() => {
@@ -100,7 +103,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
     setFestejo({ puntos: tarea.puntos, key: Date.now(), uid }) // uid = quien completa/gana
 
     await completarTarea(hogarId, tarea, uid)
-    enviarPush(companero, 'tareas', {
+    enviarPushHogar(companeros, 'tareas', {
       titulo: t('notif.tareaHechaTitulo'),
       cuerpo: t('notif.tareaHechaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: tarea.nombre, puntos: tarea.puntos }),
     })
@@ -127,7 +130,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
   const detalleDescansa = detalleVivo?.proximaAparicion && detalleVivo.proximaAparicion.toMillis() > limite
 
   async function handleAprobar(tarea) {
-    await aprobarTarea(hogarId, tarea, uid)
+    await aprobarTarea(hogarId, tarea, uid, miembros.map((m) => m.id))
   }
   async function handleRechazar(tarea) {
     await rechazarTarea(hogarId, tarea.id)
@@ -178,6 +181,9 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
                 key={tar.id}
                 tarea={tar}
                 esMia={tar.creadaPor === uid && !solo}
+                yaAprobe={(tar.aprobadaPorUids || []).includes(uid)}
+                aprobados={(tar.aprobadaPorUids || []).length}
+                requeridos={Math.max(0, miembros.length - 1)}
                 creador={porUid[tar.creadaPor]}
                 onAprobar={() => handleAprobar(tar)}
                 onRechazar={() => handleRechazar(tar)}
@@ -202,7 +208,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
         onCerrar={() => setModalAbierto(false)}
         onGuardar={async (datos) => {
           await crearTarea(hogarId, datos, uid)
-          enviarPush(companero, 'tareas', {
+          enviarPushHogar(companeros, 'tareas', {
             titulo: t('notif.nuevaTareaTitulo'),
             cuerpo: t('notif.nuevaTareaCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), tarea: datos.nombre }),
           })
@@ -523,8 +529,11 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
   )
 }
 
-function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
+function TareaPendiente({ tarea, esMia, yaAprobe, aprobados, requeridos, creador, onAprobar, onRechazar }) {
   const { t, idioma } = useIdioma()
+  // El progreso de aprobaciones solo tiene sentido con 3+ personas (varios que
+  // deben aprobar). En hogares de 2 no se muestra (ruido).
+  const mostrarProgreso = requeridos >= 2
   return (
     <div className="tarjeta mb-3">
       <div className="flex items-center justify-between">
@@ -541,9 +550,18 @@ function TareaPendiente({ tarea, esMia, creador, onAprobar, onRechazar }) {
               : t('tareas.unaSolaVez')}
         {creador && ` · ${t('tareas.propuestaPor', { icono: creador.icono, nombre: creador.nombre })}`}
       </p>
+      {mostrarProgreso && (
+        <p className="mt-2 text-xs font-bold text-oliva-oscuro/70">
+          {t('tareas.aprobacionesProgreso', { n: aprobados, total: requeridos })}
+        </p>
+      )}
       {esMia ? (
         <p className="mt-3 rounded-xl bg-crema-oscuro px-3 py-2 text-center text-sm font-bold text-oliva-oscuro">
           {t('tareas.esperandoAprobacion')}
+        </p>
+      ) : yaAprobe ? (
+        <p className="mt-3 rounded-xl bg-salvia-claro/40 px-3 py-2 text-center text-sm font-bold text-oliva">
+          {t('tareas.tuAprobada')}
         </p>
       ) : (
         <div className="mt-3 flex gap-2">

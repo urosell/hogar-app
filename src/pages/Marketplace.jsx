@@ -9,13 +9,13 @@ import {
   marcarCanjeCumplido,
   eliminarRecompensa,
 } from '../firebase/firebaseService'
-import { enviarPush } from '../firebase/push'
+import { enviarPushHogar } from '../firebase/push'
 import { ICONOS_RECOMPENSA, monederoDisponible } from '../data/constantes'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 export default function Marketplace() {
-  const { hogarId, uid, usuario, miembros, companero } = useApp()
+  const { hogarId, uid, usuario, miembros, companeros } = useApp()
   const { t } = useIdioma()
   const [recompensas, setRecompensas] = useState([])
   const [canjes, setCanjes] = useState([])
@@ -63,7 +63,7 @@ export default function Marketplace() {
     setCanjeando(true)
     try {
       await canjearRecompensa(hogarId, recompensa, uid)
-      enviarPush(companero, 'marketplace', {
+      enviarPushHogar(companeros, 'marketplace', {
         titulo: t('notif.canjeTitulo'),
         cuerpo: t('notif.canjeCuerpo', { nombre: usuario?.nombre || t('notif.alguien'), recompensa: recompensa.nombre }),
       })
