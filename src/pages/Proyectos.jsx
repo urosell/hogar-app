@@ -43,6 +43,15 @@ function abrirEnlace(url) {
   const u = /^https?:\/\//i.test(url) ? url : `https://${url}`
   window.open(u, '_blank', 'noopener,noreferrer')
 }
+// Normaliza los enlaces de un item a [{ nombre, url }], soportando el
+// campo antiguo `enlace` (string único) de items creados antes de la mejora.
+function enlacesDeItem(item) {
+  if (Array.isArray(item?.enlaces) && item.enlaces.length) {
+    return item.enlaces.filter((e) => e?.url)
+  }
+  if (item?.enlace) return [{ nombre: '', url: item.enlace }]
+  return []
+}
 
 export default function Proyectos() {
   const { hogarId, uid } = useApp()
@@ -330,11 +339,15 @@ function ProyectoDetalle({ proyecto, onVolver, onEditar, onEliminar, modalProyec
               <p className="whitespace-pre-wrap rounded-2xl bg-crema-claro px-3 py-2.5 text-oliva-oscuro">{detalleVivo.notas}</p>
             )}
 
-            {detalleVivo.enlace && (
-              <button onClick={() => abrirEnlace(detalleVivo.enlace)} className="flex w-full items-center justify-center gap-2 rounded-full border border-oliva py-3 font-bold text-oliva transition-transform active:scale-95">
-                <IconoEnlace className="h-5 w-5" />
-                {t('pr.abrirEnlace')}
-              </button>
+            {enlacesDeItem(detalleVivo).length > 0 && (
+              <div className="space-y-2">
+                {enlacesDeItem(detalleVivo).map((e, i) => (
+                  <button key={i} onClick={() => abrirEnlace(e.url)} className="flex w-full items-center justify-center gap-2 rounded-full border border-oliva px-4 py-3 font-bold text-oliva transition-transform active:scale-95">
+                    <IconoEnlace className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{e.nombre?.trim() || t('pr.abrirEnlace')}</span>
+                  </button>
+                ))}
+              </div>
             )}
 
             <div className="flex gap-2">
@@ -369,6 +382,7 @@ function ItemCard({ item, bloqueadores, idioma, onToggle, onAbrir }) {
   const { t } = useIdioma()
   const bloqueado = bloqueadores.length > 0 && !item.hecho
   const fecha = fmtFechaCorta(item.fechaClave, idioma)
+  const numEnlaces = enlacesDeItem(item).length
   return (
     <div className={`tarjeta flex items-center gap-3 ${item.hecho ? 'opacity-60' : ''}`}>
       {/* Casilla de hecho */}
@@ -386,7 +400,7 @@ function ItemCard({ item, bloqueadores, idioma, onToggle, onAbrir }) {
       {/* Cuerpo (abre el detalle) */}
       <button onClick={onAbrir} className="min-w-0 flex-1 text-left">
         <p className={`truncate font-bold text-bosque ${item.hecho ? 'line-through' : ''}`}>{item.nombre}</p>
-        {(fecha || bloqueado || item.enlace) && (
+        {(fecha || bloqueado || numEnlaces > 0) && (
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             {bloqueado && (
               <span className="flex items-center gap-1 text-xs font-bold text-marron-oscuro">
@@ -400,7 +414,12 @@ function ItemCard({ item, bloqueadores, idioma, onToggle, onAbrir }) {
                 {fecha}
               </span>
             )}
-            {item.enlace && <IconoEnlace className="h-3.5 w-3.5 text-oliva-oscuro/60" />}
+            {numEnlaces > 0 && (
+              <span className="flex items-center gap-1 text-xs font-bold text-oliva-oscuro/60">
+                <IconoEnlace className="h-3.5 w-3.5" />
+                {numEnlaces > 1 ? numEnlaces : null}
+              </span>
+            )}
           </div>
         )}
       </button>
@@ -464,7 +483,7 @@ function ItemModal({ abierto, onCerrar, onGuardar, item, items }) {
   const editando = !!item
   const [nombre, setNombre] = useState('')
   const [notas, setNotas] = useState('')
-  const [enlace, setEnlace] = useState('')
+  const [enlaces, setEnlaces] = useState([])
   const [fecha, setFecha] = useState('')
   const [deps, setDeps] = useState([])
   const [enviando, setEnviando] = useState(false)
@@ -473,10 +492,20 @@ function ItemModal({ abierto, onCerrar, onGuardar, item, items }) {
     if (!abierto) return
     setNombre(item?.nombre || '')
     setNotas(item?.notas || '')
-    setEnlace(item?.enlace || '')
+    setEnlaces(enlacesDeItem(item).map((e) => ({ nombre: e.nombre || '', url: e.url || '' })))
     setFecha(tsAInputDate(item?.fechaClave))
     setDeps(item?.dependencias || [])
   }, [abierto, item])
+
+  function añadirEnlace() {
+    setEnlaces((prev) => [...prev, { nombre: '', url: '' }])
+  }
+  function cambiarEnlace(i, campo, valor) {
+    setEnlaces((prev) => prev.map((e, j) => (j === i ? { ...e, [campo]: valor } : e)))
+  }
+  function quitarEnlace(i) {
+    setEnlaces((prev) => prev.filter((_, j) => j !== i))
+  }
 
   // Posibles dependencias: el resto de items del proyecto (no el propio).
   const candidatos = useMemo(() => items.filter((i) => i.id !== item?.id), [items, item])
@@ -494,7 +523,7 @@ function ItemModal({ abierto, onCerrar, onGuardar, item, items }) {
     try {
       // Solo guarda dependencias que sigan existiendo.
       const depsValidas = deps.filter((id) => candidatos.some((c) => c.id === id))
-      await onGuardar({ nombre: nombre.trim(), notas, enlace, fechaClave: fecha, dependencias: depsValidas })
+      await onGuardar({ nombre: nombre.trim(), notas, enlaces, fechaClave: fecha, dependencias: depsValidas })
     } finally {
       setEnviando(false)
     }
@@ -512,8 +541,39 @@ function ItemModal({ abierto, onCerrar, onGuardar, item, items }) {
           <textarea value={notas} onChange={(e) => setNotas(e.target.value)} placeholder={t('pr.notasPlaceholder')} className="input min-h-[80px] resize-y" maxLength={500} />
         </div>
         <div>
-          <label className="etiqueta">{t('pr.enlaceLabel')}</label>
-          <input type="url" inputMode="url" value={enlace} onChange={(e) => setEnlace(e.target.value)} placeholder={t('pr.enlacePlaceholder')} className="input" />
+          <label className="etiqueta">{t('pr.enlacesLabel')}</label>
+          {enlaces.length > 0 && (
+            <div className="space-y-2.5">
+              {enlaces.map((e, i) => (
+                <div key={i} className="rounded-2xl bg-crema-oscuro/40 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={e.nombre}
+                      onChange={(ev) => cambiarEnlace(i, 'nombre', ev.target.value)}
+                      placeholder={t('pr.enlaceNombrePlaceholder')}
+                      className="input flex-1"
+                      maxLength={40}
+                    />
+                    <button type="button" onClick={() => quitarEnlace(i)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-marron hover:bg-marron/10" aria-label={t('pr.quitarEnlaceAria')}>
+                      <span className="text-xl leading-none">×</span>
+                    </button>
+                  </div>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    value={e.url}
+                    onChange={(ev) => cambiarEnlace(i, 'url', ev.target.value)}
+                    placeholder={t('pr.enlacePlaceholder')}
+                    className="input mt-2"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={añadirEnlace} className="mt-2 flex items-center gap-1.5 text-sm font-bold text-oliva transition-transform active:scale-95">
+            <IconoMas className="h-4 w-4" />
+            {t('pr.añadirEnlace')}
+          </button>
         </div>
         <div>
           <label className="etiqueta">{t('pr.fechaLabel')}</label>

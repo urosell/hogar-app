@@ -30,6 +30,7 @@ import {
   Timestamp,
   writeBatch,
   runTransaction,
+  deleteField,
 } from 'firebase/firestore'
 import { auth, db, googleProvider } from './config'
 
@@ -640,11 +641,19 @@ export function escucharProyectos(hogarId, cb) {
   })
 }
 
-export async function crearItemProyecto(hogarId, proyectoId, { nombre, notas, enlace, fechaClave, dependencias }, uid) {
+// Deja los enlaces en forma [{ nombre, url }], descartando los que no tengan URL.
+function limpiarEnlaces(enlaces) {
+  if (!Array.isArray(enlaces)) return []
+  return enlaces
+    .map((e) => ({ nombre: (e?.nombre || '').trim(), url: (e?.url || '').trim() }))
+    .filter((e) => e.url)
+}
+
+export async function crearItemProyecto(hogarId, proyectoId, { nombre, notas, enlaces, fechaClave, dependencias }, uid) {
   return addDoc(itemsProyectoCol(hogarId, proyectoId), {
     nombre: nombre.trim(),
     notas: (notas || '').trim(),
-    enlace: (enlace || '').trim(),
+    enlaces: limpiarEnlaces(enlaces),
     fechaClave: fechaClaveATimestamp(fechaClave),
     dependencias: Array.isArray(dependencias) ? dependencias : [],
     hecho: false,
@@ -655,11 +664,12 @@ export async function crearItemProyecto(hogarId, proyectoId, { nombre, notas, en
   })
 }
 
-export async function actualizarItemProyecto(hogarId, proyectoId, itemId, { nombre, notas, enlace, fechaClave, dependencias }) {
+export async function actualizarItemProyecto(hogarId, proyectoId, itemId, { nombre, notas, enlaces, fechaClave, dependencias }) {
   await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId), {
     nombre: nombre.trim(),
     notas: (notas || '').trim(),
-    enlace: (enlace || '').trim(),
+    enlaces: limpiarEnlaces(enlaces),
+    enlace: deleteField(), // migra el campo antiguo de enlace único
     fechaClave: fechaClaveATimestamp(fechaClave),
     dependencias: Array.isArray(dependencias) ? dependencias : [],
   })
