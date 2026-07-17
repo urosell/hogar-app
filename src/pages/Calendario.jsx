@@ -42,6 +42,23 @@ function tsAInputDate(ts) {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
+// ¿El evento dura varios días? (fechaFin es un día posterior al de inicio)
+function esMultiDia(e) {
+  if (!e?.fecha || !e?.fechaFin) return false
+  return claveFecha(e.fechaFin.toDate()) > claveFecha(e.fecha.toDate())
+}
+
+// Rango de fechas legible: "20–25 jul" (mismo mes) o "28 jul – 3 ago".
+function fmtRango(inicioTs, finTs, idioma) {
+  const i = inicioTs.toDate ? inicioTs.toDate() : new Date(inicioTs)
+  const f = finTs.toDate ? finTs.toDate() : new Date(finTs)
+  const meses = MESES_CORTO[idioma] || MESES_CORTO.es
+  if (i.getFullYear() === f.getFullYear() && i.getMonth() === f.getMonth()) {
+    return `${i.getDate()}–${f.getDate()} ${meses[i.getMonth()]}`
+  }
+  return `${i.getDate()} ${meses[i.getMonth()]} – ${f.getDate()} ${meses[f.getMonth()]}`
+}
+
 // Suscribe a todos los proyectos y a sus items, devolviendo las fechas clave
 // aplanadas. (La pestaña de Calendario es de solo lectura sobre estos datos.)
 function useFechasProyectos(hogarId) {
@@ -107,7 +124,9 @@ export default function Calendario() {
   const { anio, mes } = cursor
   useEffect(() => {
     if (!hogarId) return
-    const desde = new Date(anio, mes, 1, 0, 0, 0)
+    // Ampliamos el inicio al mes anterior para captar eventos de varios días
+    // que empiezan antes del mes visible pero se extienden dentro de él.
+    const desde = new Date(anio, mes - 1, 1, 0, 0, 0)
     const hasta = new Date(anio, mes + 1, 0, 23, 59, 59)
     return escucharEventosRango(hogarId, desde, hasta, setEventos)
   }, [hogarId, anio, mes])
@@ -131,7 +150,19 @@ export default function Calendario() {
     // Eventos puntuales del mes (los anuales se proyectan aparte para no duplicar).
     for (const e of eventos) {
       if (!e.fecha || e.anual) continue
-      get(claveFecha(e.fecha.toDate())).eventos.push(e)
+      const inicio = e.fecha.toDate()
+      if (!esMultiDia(e)) {
+        if (inicio.getFullYear() === anio && inicio.getMonth() === mes) get(claveFecha(inicio)).eventos.push(e)
+        continue
+      }
+      // Evento de varios días: aparece en cada día de su rango dentro del mes.
+      const fin = e.fechaFin.toDate()
+      const cur = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate())
+      const finDia = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate())
+      for (let n = 0; n < 400 && cur <= finDia; n++) {
+        if (cur.getFullYear() === anio && cur.getMonth() === mes) get(claveFecha(cur)).eventos.push(e)
+        cur.setDate(cur.getDate() + 1)
+      }
     }
     // Aniversarios: aparecen cada año en su día/mes (clamp si el mes es más corto).
     const diasEnMes = new Date(anio, mes + 1, 0).getDate()
@@ -261,7 +292,13 @@ export default function Calendario() {
                     </p>
                     <p className="text-xs font-bold" style={{ color }}>
                       {nombreQuien(e.quien)}
-                      {e.anual ? ` · ${t('cal.aniversario')}` : e.tieneHora ? ` · ${fmtHora(e.fecha)}` : ''}
+                      {e.anual
+                        ? ` · ${t('cal.aniversario')}`
+                        : esMultiDia(e)
+                        ? ` · ${fmtRango(e.fecha, e.fechaFin, idioma)}`
+                        : e.tieneHora
+                        ? ` · ${fmtHora(e.fecha)}`
+                        : ''}
                     </p>
                     {e.notas && <p className="mt-0.5 truncate text-sm text-oliva-oscuro/70">{e.notas}</p>}
                   </div>
@@ -329,8 +366,10 @@ export default function Calendario() {
                 {detalle.titulo}
               </h2>
               <p className="text-sm text-oliva-oscuro/70">
-                {(() => { const [y, m, d] = claveFecha(detalle.fecha.toDate()).split('-').map(Number); return `${d} ${MESES_CORTO[idioma]?.[m - 1]}` })()}
-                {detalle.anual ? ` · ${t('cal.aniversario')}` : detalle.tieneHora ? ` · ${fmtHora(detalle.fecha)}` : ''}
+                {esMultiDia(detalle)
+                  ? fmtRango(detalle.fecha, detalle.fechaFin, idioma)
+                  : (() => { const [y, m, d] = claveFecha(detalle.fecha.toDate()).split('-').map(Number); return `${d} ${MESES_CORTO[idioma]?.[m - 1]}` })()}
+                {detalle.anual ? ` · ${t('cal.aniversario')}` : (!esMultiDia(detalle) && detalle.tieneHora) ? ` · ${fmtHora(detalle.fecha)}` : ''}
               </p>
               <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: `${colorEvento(detalle.quien, ordenUids)}22`, color: colorEvento(detalle.quien, ordenUids) }}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colorEvento(detalle.quien, ordenUids) }} />
@@ -381,6 +420,8 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto, mi
   const editando = !!evento
   const [titulo, setTitulo] = useState('')
   const [fecha, setFecha] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
+  const [variosDias, setVariosDias] = useState(false)
   const [hora, setHora] = useState('')
   const [notas, setNotas] = useState('')
   const [anual, setAnual] = useState(false)
@@ -390,18 +431,38 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto, mi
   useEffect(() => {
     if (!abierto) return
     if (evento) {
+      const finStr = tsAInputDate(evento.fechaFin)
+      const multi = !!finStr && finStr > tsAInputDate(evento.fecha)
       setTitulo(evento.titulo || '')
       setFecha(tsAInputDate(evento.fecha))
+      setVariosDias(multi)
+      setFechaFin(multi ? finStr : '')
       setHora(evento.tieneHora ? fmtHora(evento.fecha) : '')
       setNotas(evento.notas || '')
       setAnual(!!evento.anual)
       setQuien(evento.quien || 'pareja')
     } else {
-      setTitulo(''); setFecha(fechaPorDefecto || ''); setHora(''); setNotas(''); setAnual(false); setQuien('pareja')
+      setTitulo(''); setFecha(fechaPorDefecto || ''); setFechaFin(''); setVariosDias(false); setHora(''); setNotas(''); setAnual(false); setQuien('pareja')
     }
   }, [abierto, evento, fechaPorDefecto])
 
-  const valido = titulo.trim() && fecha
+  const valido = titulo.trim() && fecha && (!variosDias || (fechaFin && fechaFin >= fecha))
+
+  // Activar "varios días" y "aniversario" son excluyentes: uno cancela al otro.
+  function toggleVariosDias() {
+    setVariosDias((v) => {
+      const nuevo = !v
+      if (nuevo) { setAnual(false); if (!fechaFin || fechaFin < fecha) setFechaFin(fecha) }
+      return nuevo
+    })
+  }
+  function toggleAnual() {
+    setAnual((v) => {
+      const nuevo = !v
+      if (nuevo) setVariosDias(false)
+      return nuevo
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -409,7 +470,16 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto, mi
     setEnviando(true)
     try {
       // Un aniversario ignora la hora (es un día entero, todos los años).
-      await onGuardar({ titulo: titulo.trim(), notas, fecha, hora: anual ? '' : hora, anual, quien })
+      // Un evento de varios días es a nivel de día (sin hora).
+      await onGuardar({
+        titulo: titulo.trim(),
+        notas,
+        fecha,
+        fechaFin: variosDias ? fechaFin : '',
+        hora: anual || variosDias ? '' : hora,
+        anual,
+        quien,
+      })
     } finally {
       setEnviando(false)
     }
@@ -450,20 +520,45 @@ function EventoModal({ abierto, onCerrar, onGuardar, evento, fechaPorDefecto, mi
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="etiqueta">{t('cal.fechaLabel')}</label>
-            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="input" />
+            <label className="etiqueta">{variosDias ? t('cal.fechaInicioLabel') : t('cal.fechaLabel')}</label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => { const v = e.target.value; setFecha(v); if (variosDias && (!fechaFin || fechaFin < v)) setFechaFin(v) }}
+              className="input"
+            />
           </div>
-          {!anual && (
+          {variosDias ? (
+            <div className="flex-1">
+              <label className="etiqueta">{t('cal.fechaFinLabel')}</label>
+              <input type="date" value={fechaFin} min={fecha} onChange={(e) => setFechaFin(e.target.value)} className="input" />
+            </div>
+          ) : !anual ? (
             <div className="flex-1">
               <label className="etiqueta">{t('cal.horaLabel')}</label>
               <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="input" />
             </div>
-          )}
+          ) : null}
         </div>
+        {/* Toggle varios días (evento con inicio y fin) */}
+        <button
+          type="button"
+          onClick={toggleVariosDias}
+          className="flex w-full items-center justify-between rounded-2xl bg-crema-oscuro/60 px-4 py-3 text-left"
+          aria-pressed={variosDias}
+        >
+          <span>
+            <span className="flex items-center gap-1.5 font-bold text-bosque">📆 {t('cal.variosDiasLabel')}</span>
+            <span className="text-xs text-oliva-oscuro/60">{t('cal.variosDiasDesc')}</span>
+          </span>
+          <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${variosDias ? 'bg-oliva' : 'bg-crema-oscuro'}`}>
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-crema-claro transition-all ${variosDias ? 'left-[22px]' : 'left-0.5'}`} />
+          </span>
+        </button>
         {/* Toggle aniversario (se repite cada año) */}
         <button
           type="button"
-          onClick={() => setAnual((v) => !v)}
+          onClick={toggleAnual}
           className="flex w-full items-center justify-between rounded-2xl bg-crema-oscuro/60 px-4 py-3 text-left"
           aria-pressed={anual}
         >

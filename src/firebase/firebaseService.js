@@ -716,11 +716,20 @@ function fechaHoraATimestamp(fechaStr, horaStr) {
   return Timestamp.fromMillis(new Date(y, m - 1, d, hh, mm).getTime())
 }
 
-export async function crearEvento(hogarId, { titulo, notas, fecha, hora, anual, quien }, uid) {
+// Fecha fin de un evento de varios días: solo cuenta si es un día posterior al
+// de inicio. Se guarda a las 00:00 (el rango es a nivel de día, sin hora).
+function fechaFinATimestamp(fechaStr, fechaFinStr) {
+  if (!fechaFinStr || fechaFinStr <= fechaStr) return null
+  return fechaHoraATimestamp(fechaFinStr, '')
+}
+
+export async function crearEvento(hogarId, { titulo, notas, fecha, fechaFin, hora, anual, quien }, uid) {
   return addDoc(eventosCol(hogarId), {
     titulo: titulo.trim(),
     notas: (notas || '').trim(),
     fecha: fechaHoraATimestamp(fecha, hora),
+    // Un aniversario es siempre de un solo día (se repite cada año).
+    fechaFin: anual ? null : fechaFinATimestamp(fecha, fechaFin),
     tieneHora: !!hora,
     anual: !!anual, // aniversario: se repite cada año en el mismo día/mes
     quien: quien || 'pareja', // uid de un miembro o 'pareja' (compartido)
@@ -729,11 +738,12 @@ export async function crearEvento(hogarId, { titulo, notas, fecha, hora, anual, 
   })
 }
 
-export async function actualizarEvento(hogarId, eventoId, { titulo, notas, fecha, hora, anual, quien }) {
+export async function actualizarEvento(hogarId, eventoId, { titulo, notas, fecha, fechaFin, hora, anual, quien }) {
   await updateDoc(doc(db, 'hogares', hogarId, 'eventos', eventoId), {
     titulo: titulo.trim(),
     notas: (notas || '').trim(),
     fecha: fechaHoraATimestamp(fecha, hora),
+    fechaFin: anual ? null : fechaFinATimestamp(fecha, fechaFin),
     tieneHora: !!hora,
     anual: !!anual,
     quien: quien || 'pareja',
