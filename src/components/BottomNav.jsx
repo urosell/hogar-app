@@ -12,21 +12,17 @@ const TABS = [
   { id: 'marketplace', clave: 'nav.marketplace', Icono: IconoRegalo },
 ]
 
-// Colores tomados del diseño assets/3_Elements_Circled_Navigation.svg
-const BARRA = '#30444E' // fondo oscuro de la barra
-const ACTIVO = '#3DD598' // círculo verde menta del tab seleccionado
-const INACTIVO = '#96A7AF' // iconos grises de los tabs no seleccionados
-
+// Estilo cartoon: píldora flotante oliva oscuro, tab activo en círculo dorado.
 export default function BottomNav({ activo, onCambiar }) {
   const { t } = useIdioma()
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30"
-      style={{ paddingBottom: 'var(--safe-bottom)' }}
+      className="fixed inset-x-0 bottom-0 z-30 px-3"
+      style={{ paddingBottom: 'calc(0.5rem + var(--safe-bottom))' }}
     >
       <div
-        className="mx-auto flex max-w-md items-center justify-around rounded-t-[25px] px-4 py-1.5 shadow-[0_-1px_14px_rgba(25,40,47,0.5)]"
-        style={{ backgroundColor: BARRA }}
+        className="mx-auto flex max-w-md items-center justify-around rounded-[28px] bg-contorno px-3 py-1.5"
+        style={{ boxShadow: '0 4px 0 rgba(0, 0, 0, 0.28), 0 12px 24px rgba(0, 0, 0, 0.25)' }}
       >
         {TABS.map(({ id, clave, Icono, grande }) => {
           const esActivo = activo === id
@@ -36,16 +32,12 @@ export default function BottomNav({ activo, onCambiar }) {
               onClick={() => onCambiar(id)}
               aria-label={t(clave)}
               aria-current={esActivo ? 'page' : undefined}
-              className="flex flex-1 items-center justify-center"
+              className="flex flex-1 cursor-pointer items-center justify-center"
             >
               <span
                 className={`flex items-center justify-center rounded-full transition-all duration-200 ${
                   grande ? 'h-14 w-14' : 'h-12 w-12'
-                }`}
-                style={{
-                  backgroundColor: esActivo ? ACTIVO : 'transparent',
-                  color: esActivo ? '#ffffff' : INACTIVO,
-                }}
+                } ${esActivo ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'}`}
               >
                 <Icono className={grande ? 'h-8 w-8' : 'h-6 w-6'} />
               </span>

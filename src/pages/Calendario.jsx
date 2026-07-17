@@ -16,12 +16,12 @@ import { Modal, Vacio, IconoMas, IconoFlecha, IconoGym } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 // Colores de las fuentes (inline para que sean distinguibles en ambos temas).
-const COLOR_PROYECTO = '#FF7A80' // coral
-const COLOR_GYM = '#5AA9E6' // azul
-const COLOR_PAREJA = '#3DD598' // menta (eventos compartidos)
+const COLOR_PROYECTO = '#C85A3A' // terracota
+const COLOR_GYM = '#4A7C9E' // azul desierto
+const COLOR_PAREJA = '#8FB350' // verde oliva claro (eventos compartidos)
 // Color por persona, asignado por el orden estable de uids del hogar.
-// Un color por miembro (hasta 4): violeta, ámbar, menta, rosa.
-const COLORES_PERSONA = ['#A78BFA', '#F5A623', '#3DD598', '#EC4899']
+// Un color por miembro (hasta 4): violeta, ámbar, teal, rosa.
+const COLORES_PERSONA = ['#9B7ED9', '#E8A33D', '#5AA9A0', '#D96A8B']
 
 // Devuelve el color de un evento según su dueño ('pareja' o uid de un miembro).
 function colorEvento(quien, ordenUids) {

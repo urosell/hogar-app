@@ -8,46 +8,55 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-    /* ── Tema NOCHE (Marvie dark) — por defecto ──
-       Valores en canales RGB separados por espacios (para rgb(var(--x)/a)). */
-    --crema: 25 40 47; /* #19282F fondo */
-    --crema-claro: 34 51 60; /* #22333C tarjetas */
-    --crema-oscuro: 42 61 71; /* #2A3D47 bordes/2º */
-    --salvia: 61 213 152; /* #3DD598 menta */
-    --salvia-claro: 44 74 67; /* #2C4A43 tinte menta */
-    --salvia-oscuro: 146 160 172; /* #92A0AC atenuado */
-    --oliva: 61 213 152; /* #3DD598 primario */
-    --oliva-claro: 92 224 172; /* #5CE0AC */
-    --oliva-oscuro: 146 160 172; /* #92A0AC texto atenuado */
-    --bosque: 255 255 255; /* texto principal */
-    --marron: 255 87 95; /* #FF575F coral */
-    --marron-claro: 255 138 143; /* #FF8A8F */
-    --marron-oscuro: 255 122 128; /* #FF7A80 */
-    /* Elevación soft/clay: sombra exterior + halo superior sutil para dar volumen "blando". */
-    --shadow-suave: 0 2px 8px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-    --shadow-tarjeta: 0 10px 30px rgba(0, 0, 0, 0.36), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
-    --skeleton-shimmer: rgba(255, 255, 255, 0.08);
+    /* ── Tema NOCHE (desierto de noche) — por defecto ──
+       Valores en canales RGB separados por espacios (para rgb(var(--x)/a)).
+       Estilo "cartoon/sticker": contornos gruesos + sombras duras desplazadas. */
+    --crema: 42 41 24; /* #2A2918 fondo oliva profundo */
+    --crema-claro: 58 59 35; /* #3A3B23 tarjetas */
+    --crema-oscuro: 76 77 46; /* #4C4D2E bordes/2º */
+    --salvia: 148 179 98; /* #94B362 verde éxito */
+    --salvia-claro: 58 71 40; /* #3A4728 tinte verde */
+    --salvia-oscuro: 168 163 118; /* #A8A376 atenuado */
+    --oliva: 233 185 73; /* #E9B949 dorado primario */
+    --oliva-claro: 240 201 106; /* #F0C96A */
+    --oliva-oscuro: 193 187 137; /* #C1BB89 texto atenuado */
+    --bosque: 244 234 194; /* #F4EAC2 texto principal crema */
+    --marron: 226 122 90; /* #E27A5A terracota */
+    --marron-claro: 238 156 130; /* #EE9C82 */
+    --marron-oscuro: 199 96 66; /* #C76042 */
+    --dorado: 233 185 73; /* #E9B949 acento dorado */
+    --contorno: 22 24 12; /* #16180C contorno de tarjetas/botones */
+    /* Degradado del fondo (arriba → abajo) */
+    --fondo-a: 30 39 24; /* #1E2718 verde noche */
+    --fondo-b: 42 41 24; /* #2A2918 oliva profundo */
+    /* Sombras duras (estilo sticker): bloque desplazado hacia abajo. */
+    --shadow-suave: 0 3px 0 rgba(10, 12, 5, 0.9);
+    --shadow-tarjeta: 0 5px 0 rgba(10, 12, 5, 0.9), 0 14px 28px rgba(0, 0, 0, 0.35);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.07);
   }
 
-  /* ── Tema DÍA (gris claro) ── */
+  /* ── Tema DÍA (desierto al sol) ── */
   :root[data-theme='day'] {
-    --crema: 237 239 242; /* #EDEFF2 fondo gris claro */
-    --crema-claro: 255 255 255; /* tarjetas blancas */
-    --crema-oscuro: 220 225 230; /* #DCE1E6 bordes/2º */
-    --salvia: 61 213 152; /* #3DD598 menta (igual que modo noche) */
-    --salvia-claro: 214 243 231; /* #D6F3E7 tinte menta claro */
-    --salvia-oscuro: 107 118 130; /* #6B7682 atenuado */
-    --oliva: 61 213 152; /* #3DD598 verde primario (igual que modo noche) */
-    --oliva-claro: 92 224 172; /* #5CE0AC */
-    --oliva-oscuro: 74 85 96; /* #4A5560 texto atenuado fuerte */
-    --bosque: 27 42 51; /* #1B2A33 texto principal */
-    --marron: 229 72 77; /* #E5484D coral */
-    --marron-claro: 242 120 124; /* #F2787C */
-    --marron-oscuro: 179 50 47; /* #B3322F */
-    /* Elevación soft/clay (día): sombra exterior suave + halo blanco superior. */
-    --shadow-suave: 0 2px 8px rgba(20, 40, 60, 0.08), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-    --shadow-tarjeta: 0 10px 26px rgba(20, 40, 60, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
-    --skeleton-shimmer: rgba(255, 255, 255, 0.6);
+    --crema: 239 220 160; /* #EFDCA0 arena */
+    --crema-claro: 251 243 208; /* #FBF3D0 tarjetas crema */
+    --crema-oscuro: 230 209 143; /* #E6D18F bordes/2º */
+    --salvia: 106 140 60; /* #6A8C3C verde éxito */
+    --salvia-claro: 223 232 183; /* #DFE8B7 tinte verde claro */
+    --salvia-oscuro: 122 116 66; /* #7A7442 atenuado */
+    --oliva: 84 95 38; /* #545F26 oliva oscuro primario */
+    --oliva-claro: 111 124 52; /* #6F7C34 */
+    --oliva-oscuro: 99 95 44; /* #635F2C texto atenuado fuerte */
+    --bosque: 61 66 26; /* #3D421A texto principal oliva */
+    --marron: 191 84 51; /* #BF5433 terracota */
+    --marron-claro: 224 129 100; /* #E08164 */
+    --marron-oscuro: 158 65 38; /* #9E4126 */
+    --dorado: 240 178 55; /* #F0B237 acento dorado */
+    --contorno: 68 74 30; /* #444A1E contorno oliva oscuro */
+    --fondo-a: 166 200 155; /* #A6C89B verde suave arriba */
+    --fondo-b: 239 220 160; /* #EFDCA0 arena abajo */
+    --shadow-suave: 0 3px 0 rgba(68, 74, 30, 0.85);
+    --shadow-tarjeta: 0 5px 0 rgba(68, 74, 30, 0.85), 0 14px 26px rgba(68, 74, 30, 0.14);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.55);
   }
 
   html,
@@ -56,10 +65,25 @@
     height: 100%;
   }
 
-  /* Tipografía: Nunito en cuerpo (font-sans), Fraunces en títulos (font-display). */
+  /* Tipografía: Nunito en cuerpo (font-sans), Baloo 2 en títulos (font-display). */
   body {
     @apply bg-crema text-bosque font-sans antialiased;
     overscroll-behavior-y: none;
+  }
+
+  /* Degradado del desierto fijado al viewport (pseudo-elemento fixed: funciona
+     también en iOS, donde background-attachment: fixed no es fiable). */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    background: linear-gradient(
+      180deg,
+      rgb(var(--fondo-a)) 0%,
+      rgb(var(--fondo-b)) 55%,
+      rgb(var(--fondo-b)) 100%
+    );
   }
 
   h1,
@@ -77,24 +101,28 @@
 }
 
 @layer components {
+  /* Botones estilo sticker: contorno grueso + sombra dura que se "hunde" al pulsar. */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-bold
-      transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3 font-bold
+      transition-all duration-150 disabled:opacity-50;
   }
   .btn-primario {
-    @apply btn bg-oliva text-crema-claro shadow-suave hover:opacity-90;
+    @apply btn border-2 border-contorno bg-oliva text-crema-claro shadow-suave
+      active:translate-y-[3px] active:shadow-none disabled:active:translate-y-0 disabled:active:shadow-suave;
   }
   .btn-secundario {
-    @apply btn bg-crema-oscuro text-bosque hover:bg-salvia-claro;
+    @apply btn border-2 border-contorno/60 bg-crema-oscuro text-bosque shadow-suave
+      active:translate-y-[3px] active:shadow-none hover:bg-salvia-claro;
   }
   .btn-fantasma {
-    @apply btn bg-transparent text-oliva hover:bg-crema-oscuro;
+    @apply btn bg-transparent text-oliva hover:bg-crema-oscuro active:scale-[0.97];
   }
+  /* Tarjeta sticker: contorno + sombra dura desplazada. */
   .tarjeta {
-    @apply rounded-xl2 bg-crema-claro p-4 shadow-suave;
+    @apply rounded-xl2 border-2 border-contorno bg-crema-claro p-4 shadow-suave;
   }
   .input {
-    @apply w-full rounded-2xl border border-crema-oscuro bg-crema-claro px-4 py-3 text-bosque
+    @apply w-full rounded-2xl border-2 border-contorno/50 bg-crema-claro px-4 py-3 text-bosque
       placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-2 focus:ring-oliva/30;
   }
   .etiqueta {

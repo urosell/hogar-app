@@ -80,8 +80,12 @@ export default function App() {
     <div className="mx-auto flex min-h-full max-w-md flex-col">
       {/* Cabecera */}
       <header
-        className="sticky top-0 z-20 flex items-center justify-between bg-crema/90 px-4 pb-3 backdrop-blur"
-        style={{ paddingTop: 'calc(0.75rem + var(--safe-top))' }}
+        className="sticky top-0 z-20 flex items-center justify-between px-4 pb-3 backdrop-blur"
+        style={{
+          paddingTop: 'calc(0.75rem + var(--safe-top))',
+          // Se funde con la parte alta del degradado del fondo (fijo al viewport).
+          backgroundColor: 'rgb(var(--fondo-a) / 0.72)',
+        }}
       >
         <h1 className="text-2xl font-bold text-bosque">{TITULOS[tab]}</h1>
         <div className="flex items-center gap-1">
