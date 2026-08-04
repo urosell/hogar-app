@@ -9,6 +9,7 @@ import {
   escucharListas,
   escucharItems,
   anadirItemsLote,
+  editarEntradaMenu,
   confirmarEntradaMenu,
   confirmarComidaMenu,
 } from '../../firebase/firebaseService'
@@ -55,6 +56,7 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
   const [diaSel, setDiaSel] = useState(() => claveDia(new Date()))
   const [menu, setMenu] = useState({})
   const [anadiendo, setAnadiendo] = useState(null) // comida a la que añadir
+  const [editando, setEditando] = useState(null) // { comida, entrada } que se está cambiando
   const [generando, setGenerando] = useState(false)
 
   const dias = useMemo(() => diasDeSemana(lunes), [lunes])
@@ -225,6 +227,7 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
                       esMia={esPara(e, uid)}
                       confirmada={estaConfirmada(confirmado, e, uid)}
                       onConfirmar={() => alternarEntrada(e)}
+                      onEditar={() => setEditando({ comida, entrada: e })}
                       onEliminar={() => eliminarEntradaMenu(hogarId, diaSel, comida, e)}
                     />
                   ))}
@@ -260,9 +263,29 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
           alimentosPorId={alimentosPorId}
           miembros={miembros}
           onCerrar={() => setAnadiendo(null)}
-          onAnadir={async (entrada) => {
+          onGuardar={async (entrada) => {
             await anadir(anadiendo, entrada)
             setAnadiendo(null)
+          }}
+        />
+      )}
+
+      {/* Mismo modal, relleno con lo que ya había. La clave fuerza a React a
+          montarlo de cero al cambiar de entrada, para que no arrastre el
+          estado de la anterior. */}
+      {editando && (
+        <ModalAnadirEntrada
+          key={editando.entrada.id}
+          comida={editando.comida}
+          entrada={editando.entrada}
+          recetas={recetas}
+          alimentos={alimentos}
+          alimentosPorId={alimentosPorId}
+          miembros={miembros}
+          onCerrar={() => setEditando(null)}
+          onGuardar={async (nueva) => {
+            await editarEntradaMenu(hogarId, diaSel, editando.comida, editando.entrada.id, nueva)
+            setEditando(null)
           }}
         />
       )}
@@ -350,7 +373,7 @@ function PanelDia({ mio, objetivo }) {
   )
 }
 
-function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onEliminar }) {
+function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onEditar, onEliminar }) {
   const { t } = useIdioma()
   const paraTexto =
     entrada.para === 'hogar'
@@ -380,14 +403,21 @@ function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onElim
       ) : (
         <span className="w-6 shrink-0" />
       )}
-      <span className="text-lg">{entrada.emoji || (entrada.tipo === 'receta' ? '🍽️' : '🥕')}</span>
-      <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm font-bold ${confirmada ? 'text-oliva-oscuro/60 line-through' : 'text-bosque'}`}>{entrada.nombre}</p>
-        <p className="truncate text-xs text-oliva-oscuro/60">
-          {[detalle, paraTexto].filter(Boolean).join(' · ')}
-          {entrada.kcal > 0 ? ` · ${Math.round(entrada.kcal)} kcal` : ''}
-        </p>
-      </div>
+      {/* Todo el cuerpo abre la edición. La casilla y la papelera quedan fuera
+          a propósito: son acciones distintas y no deben confundirse con tocar
+          el plato para cambiarlo. */}
+      <button onClick={onEditar} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <span className="text-lg">{entrada.emoji || (entrada.tipo === 'receta' ? '🍽️' : '🥕')}</span>
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm font-bold ${confirmada ? 'text-oliva-oscuro/60 line-through' : 'text-bosque'}`}>
+            {entrada.nombre}
+          </span>
+          <span className="block truncate text-xs text-oliva-oscuro/60">
+            {[detalle, paraTexto].filter(Boolean).join(' · ')}
+            {entrada.kcal > 0 ? ` · ${Math.round(entrada.kcal)} kcal` : ''}
+          </span>
+        </span>
+      </button>
       <button onClick={onEliminar} className="text-marron/50 hover:text-marron-oscuro" aria-label={t('common.eliminar')}>
         <IconoPapelera className="h-4 w-4" />
       </button>
@@ -395,18 +425,33 @@ function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onElim
   )
 }
 
-// ── Añadir una entrada al menú ──
-function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembros, onCerrar, onAnadir }) {
+// ── Añadir o editar una entrada del menú ──
+// El mismo modal sirve para las dos cosas: con `entrada` viene relleno y guarda
+// encima, sin ella empieza en blanco y añade. Así editar permite exactamente lo
+// mismo que crear —incluido cambiar de receta— sin una segunda pantalla que
+// mantener en paralelo.
+function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorId, miembros, onCerrar, onGuardar }) {
   const { t } = useIdioma()
   const { hogarId, uid } = useApp()
-  const [modo, setModo] = useState('receta') // 'receta' | 'alimento' | 'libre'
-  const [receta, setReceta] = useState(null)
-  const [raciones, setRaciones] = useState(String(Math.max(1, miembros.length)))
-  const [alimento, setAlimento] = useState(null) // { alimento, cantidad, unidad }
+  const editando = !!entrada
+  const [modo, setModo] = useState(() => entrada?.tipo || 'receta') // 'receta' | 'alimento' | 'libre'
+  const [receta, setReceta] = useState(() =>
+    entrada?.tipo === 'receta' ? recetas.find((r) => r.id === entrada.refId) || null : null
+  )
+  const [raciones, setRaciones] = useState(() =>
+    String(entrada?.raciones || Math.max(1, miembros.length))
+  )
+  const [alimento, setAlimento] = useState(() => {
+    if (entrada?.tipo !== 'alimento') return null
+    const a = alimentosPorId?.[entrada.refId]
+    return a ? { alimento: a, cantidad: entrada.cantidad, unidad: entrada.unidad } : null
+  }) // { alimento, cantidad, unidad }
   const [buscador, setBuscador] = useState(false)
-  const [libre, setLibre] = useState('')
-  const [kcalLibre, setKcalLibre] = useState('')
-  const [para, setPara] = useState('hogar') // 'hogar' | array de uids
+  const [libre, setLibre] = useState(() => (entrada?.tipo === 'libre' ? entrada.nombre : ''))
+  const [kcalLibre, setKcalLibre] = useState(() =>
+    entrada?.tipo === 'libre' && entrada.kcal ? String(entrada.kcal) : ''
+  )
+  const [para, setPara] = useState(() => entrada?.para ?? 'hogar') // 'hogar' | array de uids
   const [q, setQ] = useState('')
   const [soloDeEstaComida, setSoloDeEstaComida] = useState(true)
 
@@ -443,7 +488,7 @@ function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembr
     if (modo === 'receta') {
       const n = Math.max(1, Number(raciones) || 1)
       const base = Math.max(1, Number(receta.raciones) || 1)
-      onAnadir({
+      onGuardar({
         tipo: 'receta',
         refId: receta.id,
         nombre: receta.nombre,
@@ -454,7 +499,7 @@ function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembr
       })
     } else if (modo === 'alimento') {
       const m = macrosDe(alimento.alimento, alimento.cantidad, alimento.unidad)
-      onAnadir({
+      onGuardar({
         tipo: 'alimento',
         refId: alimento.alimento.id,
         nombre: alimento.alimento.nombre,
@@ -465,7 +510,7 @@ function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembr
         para,
       })
     } else {
-      onAnadir({
+      onGuardar({
         tipo: 'libre',
         refId: null,
         nombre: libre.trim(),
@@ -477,7 +522,15 @@ function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembr
   }
 
   return (
-    <Modal abierto onCerrar={onCerrar} titulo={`${EMOJI_COMIDA[comida]} ${t('dietas.anadirA', { comida: t('dietas.comida.' + comida) })}`}>
+    <Modal
+      abierto
+      onCerrar={onCerrar}
+      titulo={`${EMOJI_COMIDA[comida]} ${
+        editando
+          ? t('dietas.editarEntrada')
+          : t('dietas.anadirA', { comida: t('dietas.comida.' + comida) })
+      }`}
+    >
       <div className="space-y-4">
         {/* Tipo de entrada */}
         <div className="flex gap-1 rounded-full bg-crema-oscuro/60 p-1">
@@ -604,7 +657,9 @@ function ModalAnadirEntrada({ comida, recetas, alimentos, alimentosPorId, miembr
 
         <div className="flex gap-2">
           <button onClick={onCerrar} className="btn-secundario flex-1">{t('common.cancelar')}</button>
-          <button onClick={confirmar} disabled={!listo} className="btn-primario flex-1">{t('dietas.anadir')}</button>
+          <button onClick={confirmar} disabled={!listo} className="btn-primario flex-1">
+            {t(editando ? 'common.guardar' : 'dietas.anadir')}
+          </button>
         </div>
       </div>
 

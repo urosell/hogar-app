@@ -1169,6 +1169,27 @@ export async function eliminarEntradaMenu(hogarId, claveDia, comida, entrada) {
   })
 }
 
+// Cambia una entrada ya puesta (raciones, cantidad, para quién es…).
+//
+// Va en transacción reescribiendo el array entero en vez de arrayRemove +
+// arrayUnion, por dos motivos: Firestore no admite las dos transformaciones
+// sobre el mismo campo en un solo update, y arrayUnion la mandaría al final,
+// cambiando el orden de la comida. Se **conserva el id** para que la marca de
+// "esto me lo he comido" siga apuntando a la misma entrada.
+export async function editarEntradaMenu(hogarId, claveDia, comida, entradaId, nueva) {
+  const ref = doc(db, 'hogares', hogarId, 'menus', claveDia)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) return
+    const lista = snap.data()[comida] || []
+    const i = lista.findIndex((e) => e.id === entradaId)
+    if (i === -1) return // la borraron mientras se editaba
+    const copia = [...lista]
+    copia[i] = { ...nueva, id: entradaId }
+    tx.update(ref, { [comida]: copia })
+  })
+}
+
 // ── Confirmar lo que se ha comido de verdad ──
 // Las confirmaciones NO van dentro de las entradas: viven en un mapa aparte del
 // mismo documento, `confirmado: { idEntrada: [uid, …] }`. Así marcar un plato
