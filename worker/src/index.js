@@ -1,9 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Cloudflare Worker: notificaciones push (FCM HTTP v1).
+// Cloudflare Worker: notificaciones push (FCM HTTP v1) + proxy de Open Food Facts.
 //
-// Dos entradas:
-//   1. fetch()     → la PWA hace POST cuando pasa algo (tarea, gym, canje…).
-//   2. scheduled() → Cron Trigger: recorre los "recordatorios" del hogar y, a
+// Tres entradas:
+//   1. fetch() POST /   → la PWA avisa cuando pasa algo (tarea, gym, canje…).
+//   2. fetch() GET /off/buscar → proxy del buscador de Open Food Facts (ver más
+//      abajo por qué no se puede llamar directamente desde el navegador).
+//   3. scheduled() → Cron Trigger: recorre los "recordatorios" del hogar y, a
 //      su hora, envía avisos con re-notificación y escalado a la pareja.
 //                    (ver worker/README.md y `crons` en wrangler.toml)
 //
@@ -49,10 +51,18 @@ export default {
   // ─── 1. Envío bajo demanda desde la PWA ─────────────────────────────────
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '*'
+    const url = new URL(request.url)
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
     }
+
+    // El proxy de Open Food Facts va por GET y en su propia ruta; el push
+    // sigue siendo un POST a la raíz, como siempre.
+    if (url.pathname === '/off/buscar') {
+      return buscarEnOff(url, env, origin)
+    }
+
     if (request.method !== 'POST') {
       return json({ error: 'method-not-allowed' }, 405, origin)
     }
@@ -107,6 +117,55 @@ export default {
       procesarRecordatorios(env).catch((e) => console.log('scheduled fatal:', String(e)))
     )
   },
+}
+
+// ─── Proxy de Open Food Facts ──────────────────────────────────────────────
+// Por qué existe esto: OFF tiene dos buscadores y ninguno sirve tal cual desde
+// el navegador.
+//   · el clásico (cgi/search.pl) manda CORS pero devuelve 503 la mitad de las
+//     veces: su backend va sobrecargado;
+//   · el nuevo (search.openfoodfacts.org) es estable pero NO manda
+//     Access-Control-Allow-Origin, así que el navegador bloquea la respuesta.
+// Desde el Worker no hay CORS que valga, se puede mandar el User-Agent que OFF
+// pide a los clientes y encima Cloudflare cachea el resultado.
+const OFF_BUSCADOR = 'https://search.openfoodfacts.org/search'
+const OFF_UA = 'hogar-app/1.0 (https://github.com/urosell/hogar-app)'
+const OFF_CAMPOS =
+  'code,product_name,product_name_es,brands,quantity,categories_tags,image_small_url,nutriments'
+
+async function buscarEnOff(url, env, origin) {
+  // Mismo secreto compartido que el push: evita que el Worker acabe siendo un
+  // proxy abierto y nos coma la cuota gratuita.
+  const esperado = (env.PUSH_SECRET || '').trim()
+  if (esperado && (url.searchParams.get('s') || '').trim() !== esperado) {
+    return json({ error: 'unauthorized' }, 401, origin)
+  }
+
+  const q = (url.searchParams.get('q') || '').trim()
+  if (q.length < 2) return json({ products: [] }, 200, origin)
+
+  // Se piden de más porque luego el cliente descarta los que no traen macros.
+  const limite = Math.min(30, Math.max(1, Number(url.searchParams.get('limite')) || 15))
+  const destino =
+    `${OFF_BUSCADOR}?q=${encodeURIComponent(q)}&page_size=${limite * 2}` +
+    `&langs=es&fields=${OFF_CAMPOS}`
+
+  let res
+  try {
+    res = await fetch(destino, {
+      headers: { 'User-Agent': OFF_UA, Accept: 'application/json' },
+      // Las fichas de producto no cambian de un día para otro.
+      cf: { cacheTtl: 3600, cacheEverything: true },
+    })
+  } catch (e) {
+    return json({ error: 'off-inalcanzable', detail: String(e) }, 502, origin)
+  }
+  if (!res.ok) return json({ error: 'off-error', status: res.status }, 502, origin)
+
+  const datos = await res.json()
+  // Se devuelve con la forma del API clásico ({ products }) para que el cliente
+  // no tenga que saber de qué backend de OFF viene cada resultado.
+  return json({ products: datos.hits || [] }, 200, origin)
 }
 
 // ─── Recordatorios (lógica del cron) ───────────────────────────────────────
@@ -427,7 +486,7 @@ function base64url(bytes) {
 function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   }
@@ -436,6 +495,14 @@ function corsHeaders(origin) {
 function json(obj, status, origin) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
+    headers: {
+      'Content-Type': 'application/json',
+      // Sin esto el navegador puede quedarse con una respuesta de error de un
+      // GET (un 405 de una versión anterior del Worker, por ejemplo) y seguir
+      // sirviéndola cuando ya está arreglado. El cacheo bueno —el de las fichas
+      // de Open Food Facts— se hace en la subpetición, no aquí.
+      'Cache-Control': 'no-store',
+      ...corsHeaders(origin),
+    },
   })
 }
