@@ -101,6 +101,142 @@ export function macrosReceta(receta, porId) {
   }
 }
 
+// ────────────────────── Perfil y objetivo diario ───────────────────
+// Objetivo de calorías por Mifflin-St Jeor, que es la fórmula estándar para
+// estimar el gasto en reposo a partir de peso, altura, edad y sexo. Es una
+// ESTIMACIÓN: la variación entre personas reales es de varios cientos de kcal.
+
+export const NIVELES_ACTIVIDAD = [
+  { id: 'sedentario', factor: 1.2 },
+  { id: 'ligero', factor: 1.375 },
+  { id: 'moderado', factor: 1.55 },
+  { id: 'alto', factor: 1.725 },
+  { id: 'muyAlto', factor: 1.9 },
+]
+
+// Ajuste sobre el gasto diario. El déficit y el superávit son moderados a
+// propósito: un 20% de déficit es sostenible, un 40% no.
+export const OBJETIVOS = [
+  { id: 'perder', ajuste: -0.2 },
+  { id: 'mantener', ajuste: 0 },
+  { id: 'ganar', ajuste: 0.1 },
+]
+
+export const SEXOS = ['hombre', 'mujer']
+
+// Un perfil sirve solo si están los cuatro datos que entran en la fórmula.
+export function perfilCompleto(p) {
+  return !!(
+    p &&
+    SEXOS.includes(p.sexo) &&
+    Number(p.edad) > 0 &&
+    Number(p.altura) > 0 &&
+    Number(p.peso) > 0
+  )
+}
+
+// Gasto en reposo (kcal/día).
+export function metabolismoBasal(p) {
+  if (!perfilCompleto(p)) return 0
+  const base = 10 * Number(p.peso) + 6.25 * Number(p.altura) - 5 * Number(p.edad)
+  return Math.round(base + (p.sexo === 'hombre' ? 5 : -161))
+}
+
+function factorDe(id) {
+  return NIVELES_ACTIVIDAD.find((n) => n.id === id)?.factor ?? 1.2
+}
+function ajusteDe(id) {
+  return OBJETIVOS.find((o) => o.id === id)?.ajuste ?? 0
+}
+
+// Gasto diario total, ya con la actividad pero SIN el ajuste del objetivo.
+export function gastoDiario(p) {
+  const bmr = metabolismoBasal(p)
+  return bmr ? Math.round(bmr * factorDe(p.actividad)) : 0
+}
+
+// Lo que toca comer al día según el objetivo.
+export function objetivoKcal(p) {
+  const gasto = gastoDiario(p)
+  return gasto ? Math.round(gasto * (1 + ajusteDe(p.objetivo))) : 0
+}
+
+// Reparto de macros del objetivo. La proteína se fija por peso corporal (no por
+// porcentaje de kcal) porque es lo que se recomienda en la práctica; la grasa
+// toma un 30% de las calorías y los hidratos son lo que queda.
+const PROT_POR_KG = { perder: 2, mantener: 1.6, ganar: 1.8 }
+
+export function objetivoMacros(p) {
+  const kcal = objetivoKcal(p)
+  if (!kcal) return { ...MACROS_CERO }
+  const prot = Math.round((PROT_POR_KG[p.objetivo] ?? 1.6) * Number(p.peso))
+  const grasa = Math.round((kcal * 0.3) / 9)
+  // 4 kcal/g de proteína e hidratos, 9 kcal/g de grasa.
+  const hidratos = Math.max(0, Math.round((kcal - prot * 4 - grasa * 9) / 4))
+  return { kcal, prot, grasa, hidratos }
+}
+
+// ───────────────── Consumo real de un día (lo confirmado) ──────────
+// `confirmado` es el mapa { idEntrada: [uid, …] } del documento del día.
+
+export function estaConfirmada(confirmado, entrada, uid) {
+  return (confirmado?.[entrada?.id] || []).includes(uid)
+}
+
+// ¿A cuántas personas alimenta una entrada? 'hogar' = toda la casa.
+function comensales(entrada, miembros) {
+  if (entrada.para === 'hogar') return Math.max(1, miembros.length)
+  return Math.max(1, (entrada.para || []).length)
+}
+
+// Macros que le corresponden a `uid` de una entrada, repartiendo a partes
+// iguales lo que es para todo el hogar.
+export function macrosEntradaPara(entrada, uid, miembros, recetasPorId, alimentosPorId) {
+  const esParaMi = entrada.para === 'hogar' || (entrada.para || []).includes(uid)
+  if (!esParaMi) return { ...MACROS_CERO }
+
+  let total
+  if (entrada.tipo === 'receta') {
+    const receta = recetasPorId?.[entrada.refId]
+    if (!receta) return { ...MACROS_CERO }
+    total = escalarMacros(receta.porRacion || MACROS_CERO, Number(entrada.raciones) || 1)
+  } else if (entrada.tipo === 'alimento') {
+    total = macrosDe(alimentosPorId?.[entrada.refId], entrada.cantidad, entrada.unidad)
+  } else {
+    // Plato libre: solo se sabe lo que se tecleó a mano, y solo kcal.
+    total = { ...MACROS_CERO, kcal: Number(entrada.kcal) || 0 }
+  }
+  return escalarMacros(total, 1 / comensales(entrada, miembros))
+}
+
+// Suma de lo CONFIRMADO por `uid` en un día. Devuelve también lo planificado,
+// para poder enseñar "llevas X de los Y que habías planeado".
+export function consumoDelDia(dia, confirmado, uid, miembros, recetasPorId, alimentosPorId) {
+  let comido = { ...MACROS_CERO }
+  let plan = { ...MACROS_CERO }
+  let nConfirmadas = 0
+  let nEntradas = 0
+
+  for (const comida of COMIDAS) {
+    for (const entrada of dia?.[comida] || []) {
+      const m = macrosEntradaPara(entrada, uid, miembros, recetasPorId, alimentosPorId)
+      if (m.kcal === 0 && m.prot === 0 && m.grasa === 0 && m.hidratos === 0) continue
+      nEntradas++
+      plan = sumarMacros(plan, m)
+      if (estaConfirmada(confirmado, entrada, uid)) {
+        nConfirmadas++
+        comido = sumarMacros(comido, m)
+      }
+    }
+  }
+  return {
+    comido: redondearMacros(comido),
+    plan: redondearMacros(plan),
+    nConfirmadas,
+    nEntradas,
+  }
+}
+
 // ─────────────────────── Lista de la compra ────────────────────────
 // Consolida los ingredientes de un conjunto de entradas de menú.
 // `entradas` = [{ tipo, refId, nombre, raciones, cantidad, unidad, dia }]

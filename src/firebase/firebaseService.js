@@ -105,6 +105,24 @@ export async function quitarTokenFcm(uid, token) {
   await updateDoc(refUsuario(uid), { fcmTokens: arrayRemove(token) })
 }
 
+// Perfil nutricional: sexo, edad, altura, peso, nivel de actividad y objetivo.
+// Va en el propio doc de usuario, así que llega gratis con el listener que ya
+// existe y también dentro de `miembros` — el hogar lo ve, que es lo pedido.
+// Solo su dueño puede escribirlo (regla `uid == request.auth.uid`).
+export async function guardarPerfilNutricional(uid, perfil) {
+  await updateDoc(refUsuario(uid), {
+    perfilNutricional: {
+      sexo: perfil.sexo || null,
+      edad: Number(perfil.edad) || 0,
+      altura: Number(perfil.altura) || 0,
+      peso: Number(perfil.peso) || 0,
+      actividad: perfil.actividad || 'moderado',
+      objetivo: perfil.objetivo || 'mantener',
+      actualizadoEn: serverTimestamp(),
+    },
+  })
+}
+
 // ──────────────────────────────── Hogares ────────────────────────────────
 
 function generarCodigo() {
@@ -1142,11 +1160,36 @@ export async function anadirEntradaMenu(hogarId, claveDia, comida, entrada) {
 }
 
 // Quita una entrada. Se le pasa el objeto TAL CUAL vino del snapshot para que
-// `arrayRemove` lo case exactamente.
+// `arrayRemove` lo case exactamente. De paso se lleva su confirmación, que si
+// no se quedaría de basura en el mapa para siempre.
 export async function eliminarEntradaMenu(hogarId, claveDia, comida, entrada) {
   await updateDoc(doc(db, 'hogares', hogarId, 'menus', claveDia), {
     [comida]: arrayRemove(entrada),
+    ...(entrada?.id ? { [`confirmado.${entrada.id}`]: deleteField() } : {}),
   })
+}
+
+// ── Confirmar lo que se ha comido de verdad ──
+// Las confirmaciones NO van dentro de las entradas: viven en un mapa aparte del
+// mismo documento, `confirmado: { idEntrada: [uid, …] }`. Así marcar un plato
+// es una única operación atómica sobre su clave, en vez de reescribir el array
+// entero — que chocaría con el `arrayRemove` del borrado y haría que dos
+// personas confirmando a la vez se pisaran.
+export async function confirmarEntradaMenu(hogarId, claveDia, entradaId, uid, comida) {
+  if (!entradaId) return
+  await updateDoc(doc(db, 'hogares', hogarId, 'menus', claveDia), {
+    [`confirmado.${entradaId}`]: comida ? arrayUnion(uid) : arrayRemove(uid),
+  })
+}
+
+// Marca (o desmarca) de golpe todas las entradas de una comida. Un solo write.
+export async function confirmarComidaMenu(hogarId, claveDia, entradas, uid, comida) {
+  const cambios = {}
+  for (const e of entradas || []) {
+    if (e?.id) cambios[`confirmado.${e.id}`] = comida ? arrayUnion(uid) : arrayRemove(uid)
+  }
+  if (Object.keys(cambios).length === 0) return
+  await updateDoc(doc(db, 'hogares', hogarId, 'menus', claveDia), cambios)
 }
 
 // Vacía un día entero del menú.

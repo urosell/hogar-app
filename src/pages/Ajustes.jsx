@@ -12,6 +12,7 @@ import { Modal, Avatar, IconoSol, IconoLuna } from '../components/ui'
 import { useTheme } from '../context/ThemeContext'
 import { useIdioma } from '../context/IdiomaContext'
 import { IDIOMAS } from '../data/i18n'
+import PerfilNutricional from './dietas/PerfilNutricional'
 
 const TIPOS = [
   { clave: 'tareas', labelKey: 'aj.notiTareas', descKey: 'aj.notiTareasDesc', emoji: '✅' },
@@ -86,6 +87,12 @@ export default function Ajustes({ abierto, onCerrar }) {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Perfil nutricional: de aquí sale el objetivo diario que pinta Dietas. */}
+        <section>
+          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('nut.titulo')}</h3>
+          <PerfilNutricional />
         </section>
 
         {/* Hogar */}

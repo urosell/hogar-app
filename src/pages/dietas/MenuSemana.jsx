@@ -9,6 +9,8 @@ import {
   escucharListas,
   escucharItems,
   anadirItemsLote,
+  confirmarEntradaMenu,
+  confirmarComidaMenu,
 } from '../../firebase/firebaseService'
 import {
   COMIDAS,
@@ -20,6 +22,10 @@ import {
   formatearCantidad,
   normalizar,
   EMOJI_COMIDA,
+  MACROS_CERO,
+  consumoDelDia,
+  estaConfirmada,
+  objetivoMacros,
 } from '../../data/nutricion'
 import { DIAS_SEMANA, MESES_CORTO } from '../../data/i18n'
 import { infoCategoria } from '../../data/constantes'
@@ -30,12 +36,6 @@ import BuscadorAlimento from './BuscadorAlimento'
 // Id local de la entrada: permite borrarla aunque haya dos platos iguales.
 function nuevoId() {
   return Math.random().toString(36).slice(2, 10)
-}
-
-// ¿A cuántas personas alimenta esta entrada? 'hogar' = toda la casa.
-function personasDe(entrada, miembros) {
-  if (entrada.para === 'hogar') return Math.max(1, miembros.length)
-  return Math.max(1, (entrada.para || []).length)
 }
 
 // ¿Le toca a esta persona?
@@ -49,7 +49,7 @@ function esPara(entrada, uid) {
 // hogar o para personas concretas.
 // ─────────────────────────────────────────────────────────────────────────
 export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentosPorId }) {
-  const { hogarId, uid, miembros } = useApp()
+  const { hogarId, uid, miembros, usuario } = useApp()
   const { t, idioma } = useIdioma()
   const [lunes, setLunes] = useState(() => lunesDe(new Date()))
   const [diaSel, setDiaSel] = useState(() => claveDia(new Date()))
@@ -83,24 +83,38 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
     await anadirEntradaMenu(hogarId, diaSel, comida, { id: nuevoId(), ...entrada })
   }
 
-  // Resumen del día: kcal totales y las que corresponden a cada persona.
-  const resumen = useMemo(() => {
-    let total = 0
-    const porPersona = {}
-    miembros.forEach((m) => (porPersona[m.id] = 0))
-    COMIDAS.forEach((c) => {
-      ;(diaActual[c] || []).forEach((e) => {
-        const kcal = Number(e.kcal) || 0
-        total += kcal
-        const n = personasDe(e, miembros)
-        const destinatarios = e.para === 'hogar' ? miembros.map((m) => m.id) : e.para || []
-        destinatarios.forEach((id) => {
-          if (porPersona[id] != null) porPersona[id] += kcal / n
-        })
-      })
+  // Marcas de "esto me lo he comido", en un mapa aparte del array de entradas.
+  const confirmado = diaActual.confirmado || {}
+
+  // Lo planificado y lo ya confirmado por cada miembro. Se recalcula desde las
+  // recetas y los alimentos en vez de leer el `kcal` cacheado en la entrada,
+  // así editar una receta se refleja en los días ya planificados.
+  const porPersona = useMemo(() => {
+    const out = {}
+    miembros.forEach((m) => {
+      out[m.id] = consumoDelDia(diaActual, confirmado, m.id, miembros, recetasPorId, alimentosPorId)
     })
-    return { total: Math.round(total), porPersona }
-  }, [diaActual, miembros])
+    return out
+  }, [diaActual, confirmado, miembros, recetasPorId, alimentosPorId])
+
+  const mio = porPersona[uid] || { comido: MACROS_CERO, plan: MACROS_CERO, nConfirmadas: 0, nEntradas: 0 }
+  const objetivo = useMemo(
+    () => objetivoMacros(usuario?.perfilNutricional || {}),
+    [usuario?.perfilNutricional]
+  )
+
+  async function alternarEntrada(entrada) {
+    await confirmarEntradaMenu(hogarId, diaSel, entrada.id, uid, !estaConfirmada(confirmado, entrada, uid))
+  }
+
+  // El botón de la comida es un atajo sobre las casillas, no un estado aparte:
+  // si ya están todas marcadas las quita, y si no, las marca todas.
+  async function alternarComida(comida) {
+    const entradas = (diaActual[comida] || []).filter((e) => esPara(e, uid))
+    if (entradas.length === 0) return
+    const todas = entradas.every((e) => estaConfirmada(confirmado, e, uid))
+    await confirmarComidaMenu(hogarId, diaSel, entradas, uid, !todas)
+  }
 
   return (
     <div className="space-y-3">
@@ -139,15 +153,20 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
         })}
       </div>
 
-      {/* Resumen del día seleccionado */}
-      {(resumen.total > 0 || miembros.length > 1) && (
+      {/* Tu día: lo que llevas comido frente a tu objetivo */}
+      <PanelDia mio={mio} objetivo={objetivo} />
+
+      {/* Lo planificado para los demás */}
+      {miembros.length > 1 && (
         <div className="flex flex-wrap items-center gap-2">
-          {resumen.total > 0 && <span className="chip bg-salvia-claro/60 text-oliva-oscuro">{resumen.total} kcal</span>}
-          {miembros.length > 1 &&
-            miembros.map((m) => {
-              const k = Math.round(resumen.porPersona[m.id] || 0)
-              return k > 0 ? (
-                <span key={m.id} className="chip bg-crema-claro text-oliva-oscuro">{m.icono} {k}</span>
+          {miembros
+            .filter((m) => m.id !== uid)
+            .map((m) => {
+              const c = porPersona[m.id]
+              return c?.plan.kcal > 0 ? (
+                <span key={m.id} className="chip bg-crema-claro text-oliva-oscuro">
+                  {m.icono} {c.comido.kcal}/{c.plan.kcal} kcal
+                </span>
               ) : null
             })}
         </div>
@@ -164,33 +183,56 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
 
       {/* Comidas del día */}
       <div className="space-y-2">
-        {COMIDAS.map((comida) => (
-          <div key={comida} className="tarjeta space-y-2 p-3">
-            <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-1.5 text-sm font-bold text-bosque">
-                <span>{EMOJI_COMIDA[comida]}</span> {t('dietas.comida.' + comida)}
-              </h3>
-              <button onClick={() => setAnadiendo(comida)} className="flex h-7 w-7 items-center justify-center rounded-full bg-oliva text-crema-claro" aria-label={t('dietas.anadir')}>
-                <IconoMas className="h-4 w-4" />
-              </button>
-            </div>
-            {(diaActual[comida] || []).length === 0 ? (
-              <p className="text-xs text-oliva-oscuro/40">{t('dietas.comidaVacia')}</p>
-            ) : (
-              <div className="space-y-1.5">
-                {(diaActual[comida] || []).map((e) => (
-                  <EntradaFila
-                    key={e.id || e.nombre}
-                    entrada={e}
-                    miembros={miembros}
-                    esMia={esPara(e, uid)}
-                    onEliminar={() => eliminarEntradaMenu(hogarId, diaSel, comida, e)}
-                  />
-                ))}
+        {COMIDAS.map((comida) => {
+          const entradas = diaActual[comida] || []
+          const mias = entradas.filter((e) => esPara(e, uid))
+          const todasMarcadas = mias.length > 0 && mias.every((e) => estaConfirmada(confirmado, e, uid))
+          return (
+            <div key={comida} className="tarjeta space-y-2 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="flex items-center gap-1.5 text-sm font-bold text-bosque">
+                  <span>{EMOJI_COMIDA[comida]}</span> {t('dietas.comida.' + comida)}
+                </h3>
+                <div className="flex items-center gap-1.5">
+                  {/* Atajo: marca o desmarca de una vez todos mis platos de esta comida */}
+                  {mias.length > 0 && (
+                    <button
+                      onClick={() => alternarComida(comida)}
+                      className={`chip border-2 text-xs ${
+                        todasMarcadas
+                          ? 'border-contorno bg-oliva text-crema-claro'
+                          : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
+                      }`}
+                      title={t(todasMarcadas ? 'dietas.desmarcarComida' : 'dietas.marcarComida')}
+                    >
+                      {todasMarcadas ? '✓' : '○'} {mias.filter((e) => estaConfirmada(confirmado, e, uid)).length}/{mias.length}
+                    </button>
+                  )}
+                  <button onClick={() => setAnadiendo(comida)} className="flex h-7 w-7 items-center justify-center rounded-full bg-oliva text-crema-claro" aria-label={t('dietas.anadir')}>
+                    <IconoMas className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+              {entradas.length === 0 ? (
+                <p className="text-xs text-oliva-oscuro/40">{t('dietas.comidaVacia')}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {entradas.map((e) => (
+                    <EntradaFila
+                      key={e.id || e.nombre}
+                      entrada={e}
+                      miembros={miembros}
+                      esMia={esPara(e, uid)}
+                      confirmada={estaConfirmada(confirmado, e, uid)}
+                      onConfirmar={() => alternarEntrada(e)}
+                      onEliminar={() => eliminarEntradaMenu(hogarId, diaSel, comida, e)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Utilidades del día */}
@@ -239,7 +281,76 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
   )
 }
 
-function EntradaFila({ entrada, miembros, esMia, onEliminar }) {
+// ── Tu día: lo confirmado frente al objetivo del perfil ──
+// Enseña lo COMIDO, no lo planificado: es lo que convierte el menú en un
+// diario. Lo planificado se ve al lado, en gris, para saber qué falta.
+function PanelDia({ mio, objetivo }) {
+  const { t } = useIdioma()
+  const hayObjetivo = objetivo.kcal > 0
+  const hayPlan = mio.nEntradas > 0
+
+  if (!hayPlan && !hayObjetivo) return null
+
+  const pct = hayObjetivo ? Math.min(100, Math.round((mio.comido.kcal / objetivo.kcal) * 100)) : 0
+  const diferencia = objetivo.kcal - mio.comido.kcal
+
+  return (
+    <div className="tarjeta space-y-2 p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-bold text-bosque">{t('dietas.hoyTitulo')}</h3>
+        {hayPlan && (
+          <span className="text-xs text-oliva-oscuro/60">
+            {t('dietas.confirmadasN', { n: mio.nConfirmadas, total: mio.nEntradas })}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-3xl font-bold text-bosque">{mio.comido.kcal}</span>
+        <span className="text-sm font-bold text-oliva-oscuro/70">
+          {hayObjetivo ? t('dietas.deObjetivo', { n: objetivo.kcal }) : 'kcal'}
+        </span>
+        {hayPlan && mio.plan.kcal !== mio.comido.kcal && (
+          <span className="ml-auto text-xs text-oliva-oscuro/50">
+            {mio.plan.kcal} {t('dietas.planificado')}
+          </span>
+        )}
+      </div>
+
+      {hayObjetivo && (
+        <>
+          <div className="h-2 overflow-hidden rounded-full bg-crema-oscuro/60">
+            <div
+              className={`h-full rounded-full transition-all ${diferencia < 0 ? 'bg-marron' : 'bg-oliva'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs font-bold text-oliva-oscuro/70">
+            {diferencia >= 0
+              ? t('dietas.restantes', { n: diferencia })
+              : t('dietas.pasado', { n: Math.abs(diferencia) })}
+          </p>
+          <div className="flex gap-3 text-xs text-oliva-oscuro/70">
+            {[
+              [t('dietas.prot'), mio.comido.prot, objetivo.prot],
+              [t('dietas.grasa'), mio.comido.grasa, objetivo.grasa],
+              [t('dietas.hidratos'), mio.comido.hidratos, objetivo.hidratos],
+            ].map(([label, hecho, meta]) => (
+              <span key={label}>
+                {label} <b className="text-bosque">{Math.round(hecho)}</b>/{meta} g
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!hayObjetivo && <p className="text-xs text-oliva-oscuro/60">{t('dietas.sinPerfil')}</p>}
+      {hayObjetivo && !hayPlan && <p className="text-xs text-oliva-oscuro/50">{t('dietas.nadaPlanificado')}</p>}
+    </div>
+  )
+}
+
+function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onEliminar }) {
   const { t } = useIdioma()
   const paraTexto =
     entrada.para === 'hogar'
@@ -254,9 +365,24 @@ function EntradaFila({ entrada, miembros, esMia, onEliminar }) {
 
   return (
     <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${esMia ? 'bg-salvia-claro/40' : 'bg-crema-claro'}`}>
+      {/* Solo se puede confirmar lo que es para ti: lo de los demás no cuenta */}
+      {esMia ? (
+        <button
+          onClick={onConfirmar}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${
+            confirmada ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/40 bg-crema-claro text-transparent'
+          }`}
+          aria-label={t('dietas.confirmarAria')}
+          aria-pressed={confirmada}
+        >
+          ✓
+        </button>
+      ) : (
+        <span className="w-6 shrink-0" />
+      )}
       <span className="text-lg">{entrada.emoji || (entrada.tipo === 'receta' ? '🍽️' : '🥕')}</span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-bosque">{entrada.nombre}</p>
+        <p className={`truncate text-sm font-bold ${confirmada ? 'text-oliva-oscuro/60 line-through' : 'text-bosque'}`}>{entrada.nombre}</p>
         <p className="truncate text-xs text-oliva-oscuro/60">
           {[detalle, paraTexto].filter(Boolean).join(' · ')}
           {entrada.kcal > 0 ? ` · ${Math.round(entrada.kcal)} kcal` : ''}
