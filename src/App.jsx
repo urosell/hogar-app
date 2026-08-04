@@ -17,6 +17,7 @@ import Proyectos from './pages/Proyectos'
 import Calendario from './pages/Calendario'
 import Recordatorios from './pages/Recordatorios'
 import Marketplace from './pages/Marketplace'
+import Dietas from './pages/Dietas'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
@@ -24,7 +25,7 @@ export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario, hogarId, miembros } = useApp()
   const { theme, toggle } = useTheme()
   const { t } = useIdioma()
-  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), calendario: t('titulo.calendario'), recordatorios: t('titulo.recordatorios'), marketplace: t('titulo.marketplace') }
+  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), dietas: t('titulo.dietas'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), calendario: t('titulo.calendario'), recordatorios: t('titulo.recordatorios'), marketplace: t('titulo.marketplace') }
   const [tab, setTab] = useState('tareas')
   const [dir, setDir] = useState('der') // dirección del slide entre pestañas
   const [seccionTareas, setSeccionTareas] = useState('activas') // 'activas' | 'aprobar'
@@ -39,7 +40,8 @@ export default function App() {
 
   // Orden visual de los tabs (igual que en la barra inferior). La dirección
   // del deslizamiento depende de si la nueva pestaña está a la derecha o izq.
-  const ORDEN = ['tareas', 'compra', 'gym', 'proyectos', 'calendario', 'recordatorios', 'marketplace']
+  // Mismo orden que la barra: las 4 fijas, y después las que viven bajo "⋯".
+  const ORDEN = ['tareas', 'compra', 'dietas', 'calendario', 'gym', 'proyectos', 'recordatorios', 'marketplace']
   function cambiarTab(nuevo) {
     if (nuevo === tab) return
     setDir(ORDEN.indexOf(nuevo) > ORDEN.indexOf(tab) ? 'der' : 'izq')
@@ -145,6 +147,7 @@ export default function App() {
           <Tareas seccion={seccionTareas} setSeccion={setSeccionTareas} onPendientes={setPendientesAprobar} />
         </div>
         <div className={tab === 'compra' ? `tab-slide-${dir}` : 'hidden'}><Compra /></div>
+        <div className={tab === 'dietas' ? `tab-slide-${dir}` : 'hidden'}><Dietas activo={tab === 'dietas'} /></div>
         <div className={tab === 'gym' ? `tab-slide-${dir}` : 'hidden'}><Gym /></div>
         <div className={tab === 'proyectos' ? `tab-slide-${dir}` : 'hidden'}><Proyectos /></div>
         <div className={tab === 'calendario' ? `tab-slide-${dir}` : 'hidden'}><Calendario /></div>

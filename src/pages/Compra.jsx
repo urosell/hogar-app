@@ -353,7 +353,11 @@ function ItemFila({ item, autor, onComprar, onEliminar, saliendo }) {
         {saliendo && '✓'}
       </button>
       <div className="flex-1">
-        <p className={`font-bold text-bosque transition-all ${saliendo ? 'text-bosque/50 line-through' : ''}`}>{item.nombre}</p>
+        <p className={`font-bold text-bosque transition-all ${saliendo ? 'text-bosque/50 line-through' : ''}`}>
+          {item.nombre}
+          {/* La cantidad solo la traen los items generados desde el menú de dietas. */}
+          {item.cantidad && <span className="ml-1.5 text-sm font-bold text-oliva">{item.cantidad}</span>}
+        </p>
         {autor && <p className="text-xs text-oliva-oscuro/60">{autor.icono} {autor.nombre}</p>}
       </div>
       <button onClick={onEliminar} className="cursor-pointer text-marron/50 hover:text-marron-oscuro" aria-label={t('compra.eliminarAria')}>

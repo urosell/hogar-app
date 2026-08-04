@@ -266,6 +266,26 @@ export function IconoAlarma({ className = ic }) {
     </svg>
   )
 }
+export function IconoDieta({ className = ic }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {/* Tenedor y cuchillo */}
+      <path d="M7 2v7a3 3 0 0 1-6 0V2" />
+      <path d="M4 2v20" />
+      <path d="M18 2c-1.7 1.2-3 3.4-3 5.8 0 2 1.2 3.6 3 4.2V2Z" />
+      <path d="M18 12v10" />
+    </svg>
+  )
+}
+export function IconoPuntos({ className = ic }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </svg>
+  )
+}
 export function IconoHistorial({ className = ic }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

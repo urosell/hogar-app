@@ -21,6 +21,14 @@ export const ICONOS_PROYECTO = [
   '🖼️', '📺', '🧺', '🪑', '🧸', '📚', '🏡', '🌳',
 ]
 
+// Galería de iconos para las recetas del módulo de dietas.
+export const ICONOS_RECETA = [
+  '🍽️', '🥗', '🍲', '🍝', '🍛', '🍜', '🥘', '🍚',
+  '🍕', '🌮', '🥪', '🍳', '🥞', '🍞', '🥐', '🧀',
+  '🍗', '🥩', '🐟', '🦐', '🥦', '🥕', '🍅', '🥔',
+  '🍎', '🍌', '🥑', '🍰', '🍮', '🥤', '☕', '🍵',
+]
+
 // Categorías predefinidas para la lista de la compra.
 export const CATEGORIAS = [
   { nombre: 'Fruta', emoji: '🍎', color: '#C2453B' },

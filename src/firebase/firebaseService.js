@@ -409,11 +409,14 @@ function itemsCol(hogarId, listaId) {
   return collection(db, 'hogares', hogarId, 'listas', listaId, 'items')
 }
 
-export async function anadirItem(hogarId, listaId, { nombre, categoria }, uid) {
+export async function anadirItem(hogarId, listaId, { nombre, categoria, cantidad }, uid) {
   const limpio = nombre.trim()
   await addDoc(itemsCol(hogarId, listaId), {
     nombre: limpio,
     categoria: categoria || 'Otros',
+    // Cantidad ya formateada ("500 g", "3 ud"). Opcional: los items escritos a
+    // mano no la llevan; los generados desde el menú de dietas, sí.
+    cantidad: cantidad || null,
     anadidoPor: uid,
     comprado: false,
     compradoPor: null,
@@ -422,6 +425,28 @@ export async function anadirItem(hogarId, listaId, { nombre, categoria }, uid) {
   })
   // Registra/incrementa el producto frecuente.
   await registrarFrecuente(hogarId, limpio, categoria || 'Otros')
+}
+
+// Añade varios items de golpe (lo usa "generar compra" del menú semanal).
+// No toca productosFrecuentes: son decenas de escrituras y estos items vienen
+// del menú, no de lo que la persona suele teclear.
+export async function anadirItemsLote(hogarId, listaId, items, uid) {
+  if (!items?.length) return 0
+  const batch = writeBatch(db)
+  items.forEach((i) => {
+    batch.set(doc(itemsCol(hogarId, listaId)), {
+      nombre: (i.nombre || '').trim(),
+      categoria: i.categoria || 'Otros',
+      cantidad: i.cantidad || null,
+      anadidoPor: uid,
+      comprado: false,
+      compradoPor: null,
+      compradoEn: null,
+      creadoEn: serverTimestamp(),
+    })
+  })
+  await batch.commit()
+  return items.length
 }
 
 export function escucharItems(hogarId, listaId, cb) {
@@ -870,6 +895,276 @@ export function escucharRecordatorios(hogarId, cb) {
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
   })
+}
+
+// ──────────────────────────────── Dietas ─────────────────────────────────
+// Tres colecciones que se apoyan una en otra:
+//
+//   alimentos  catálogo nutricional del hogar. Es la pieza central: la semilla
+//              de básicos y todo lo que se elige en Open Food Facts acaba aquí,
+//              así que buscar un alimento ya usado NO vuelve a llamar a la API.
+//   recetas    nombre + raciones + ingredientes (→ alimentos) + pasos. Guardan
+//              `porRacion` ya calculado para no tener que leer el catálogo
+//              entero solo para pintar las kcal de un día.
+//   menus      un documento por DÍA (id 'YYYY-MM-DD', como el gym), con las
+//              entradas de cada comida. Cada entrada lleva `para`: 'hogar' o
+//              un array de uids si solo la come parte de la casa.
+
+function alimentosCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'alimentos')
+}
+function recetasCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'recetas')
+}
+function menusCol(hogarId) {
+  return collection(db, 'hogares', hogarId, 'menus')
+}
+
+// ── Alimentos ──
+
+export function escucharAlimentos(hogarId, cb) {
+  const q = query(alimentosCol(hogarId), orderBy('nombre', 'asc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+export async function crearAlimento(hogarId, alimento, uid) {
+  const ref = await addDoc(alimentosCol(hogarId), {
+    nombre: (alimento.nombre || '').trim(),
+    marca: (alimento.marca || '').trim(),
+    categoria: alimento.categoria || 'Otros',
+    unidad: alimento.unidad || 'g',
+    pesoUnidad: alimento.pesoUnidad ?? null,
+    por100: {
+      kcal: Number(alimento.por100?.kcal) || 0,
+      prot: Number(alimento.por100?.prot) || 0,
+      grasa: Number(alimento.por100?.grasa) || 0,
+      hidratos: Number(alimento.por100?.hidratos) || 0,
+    },
+    origen: alimento.origen || 'manual',
+    offId: alimento.offId || null,
+    creadoPor: uid,
+    creadoEn: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function actualizarAlimento(hogarId, alimentoId, alimento) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'alimentos', alimentoId), {
+    nombre: (alimento.nombre || '').trim(),
+    marca: (alimento.marca || '').trim(),
+    categoria: alimento.categoria || 'Otros',
+    unidad: alimento.unidad || 'g',
+    pesoUnidad: alimento.pesoUnidad ?? null,
+    por100: {
+      kcal: Number(alimento.por100?.kcal) || 0,
+      prot: Number(alimento.por100?.prot) || 0,
+      grasa: Number(alimento.por100?.grasa) || 0,
+      hidratos: Number(alimento.por100?.hidratos) || 0,
+    },
+  })
+}
+
+export async function eliminarAlimento(hogarId, alimentoId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'alimentos', alimentoId))
+}
+
+// Importa la tabla de alimentos básicos la primera vez que se abre Dietas.
+// La marca de "ya sembrado" se pone en el doc del hogar DENTRO de una
+// transacción, así dos personas abriendo la pestaña a la vez no duplican el
+// catálogo. `semilla` viene de data/alimentos-semilla.js (el servicio no
+// importa datos de UI).
+export async function sembrarAlimentos(hogarId, semilla, version, uid) {
+  const hogarRef = doc(db, 'hogares', hogarId)
+  const hazlo = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(hogarRef)
+    if (!snap.exists()) return false
+    if ((snap.data().semillaDietas || 0) >= version) return false
+    tx.update(hogarRef, { semillaDietas: version })
+    return true
+  })
+  if (!hazlo) return 0
+
+  // Firestore admite 500 operaciones por lote.
+  for (let i = 0; i < semilla.length; i += 400) {
+    const batch = writeBatch(db)
+    semilla.slice(i, i + 400).forEach((a) => {
+      batch.set(doc(alimentosCol(hogarId)), {
+        ...a,
+        creadoPor: uid,
+        creadoEn: serverTimestamp(),
+      })
+    })
+    await batch.commit()
+  }
+  return semilla.length
+}
+
+// ── Recetas ──
+
+// Siembra el recetario inicial. Mismo patrón que `sembrarAlimentos`: la marca
+// va en el doc del hogar dentro de una transacción para que dos personas
+// abriendo Dietas a la vez no dupliquen las recetas.
+//
+// Se siembra DESPUÉS del catálogo y con las recetas ya resueltas (los
+// ingredientes apuntan a ids que Firestore genera al sembrar los alimentos, así
+// que no se pueden conocer de antemano; los resuelve data/recetas-semilla.js).
+export async function sembrarRecetas(hogarId, recetas, version, uid) {
+  if (!recetas?.length) return 0
+  const hogarRef = doc(db, 'hogares', hogarId)
+  const hazlo = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(hogarRef)
+    if (!snap.exists()) return false
+    if ((snap.data().semillaRecetas || 0) >= version) return false
+    tx.update(hogarRef, { semillaRecetas: version })
+    return true
+  })
+  if (!hazlo) return 0
+
+  const batch = writeBatch(db)
+  recetas.forEach((r) => {
+    batch.set(doc(recetasCol(hogarId)), {
+      nombre: (r.nombre || '').trim(),
+      emoji: r.emoji || '🍽️',
+      bloques: limpiarBloques(r.bloques),
+      raciones: Math.max(1, Number(r.raciones) || 1),
+      tiempoMin: Number(r.tiempoMin) || 0,
+      ingredientes: limpiarIngredientes(r.ingredientes),
+      pasos: (r.pasos || []).map((p) => String(p).trim()).filter(Boolean),
+      notas: (r.notas || '').trim(),
+      porRacion: r.porRacion || { kcal: 0, prot: 0, grasa: 0, hidratos: 0 },
+      creadaPor: uid,
+      creadaEn: serverTimestamp(),
+    })
+  })
+  await batch.commit()
+  return recetas.length
+}
+
+// `porRacion` llega ya calculado (data/nutricion.js) para poder pintar las
+// kcal de un día sin leer el catálogo de alimentos entero.
+export async function crearReceta(hogarId, receta, uid) {
+  const ref = await addDoc(recetasCol(hogarId), {
+    nombre: (receta.nombre || '').trim(),
+    emoji: receta.emoji || '🍽️',
+    bloques: limpiarBloques(receta.bloques),
+    raciones: Math.max(1, Number(receta.raciones) || 1),
+    tiempoMin: Number(receta.tiempoMin) || 0,
+    ingredientes: limpiarIngredientes(receta.ingredientes),
+    pasos: (receta.pasos || []).map((p) => String(p).trim()).filter(Boolean),
+    notas: (receta.notas || '').trim(),
+    porRacion: receta.porRacion || { kcal: 0, prot: 0, grasa: 0, hidratos: 0 },
+    creadaPor: uid,
+    creadaEn: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function actualizarReceta(hogarId, recetaId, receta) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'recetas', recetaId), {
+    nombre: (receta.nombre || '').trim(),
+    emoji: receta.emoji || '🍽️',
+    bloques: limpiarBloques(receta.bloques),
+    raciones: Math.max(1, Number(receta.raciones) || 1),
+    tiempoMin: Number(receta.tiempoMin) || 0,
+    ingredientes: limpiarIngredientes(receta.ingredientes),
+    pasos: (receta.pasos || []).map((p) => String(p).trim()).filter(Boolean),
+    notas: (receta.notas || '').trim(),
+    porRacion: receta.porRacion || { kcal: 0, prot: 0, grasa: 0, hidratos: 0 },
+  })
+}
+
+// Comidas del día para las que se propone la receta. Lista vacía = vale para
+// cualquiera: el filtro del menú nunca esconde una receta sin clasificar.
+const BLOQUES_VALIDOS = ['desayuno', 'comida', 'merienda', 'cena', 'otros']
+
+function limpiarBloques(bloques) {
+  if (!Array.isArray(bloques)) return []
+  return BLOQUES_VALIDOS.filter((b) => bloques.includes(b))
+}
+
+// Deja los ingredientes en forma { alimentoId, nombre, cantidad, unidad },
+// descartando los que no apunten a un alimento. El `nombre` va duplicado a
+// propósito: si alguien borra el alimento del catálogo, la receta sigue siendo
+// legible (solo pierde el cálculo de macros).
+function limpiarIngredientes(ingredientes) {
+  if (!Array.isArray(ingredientes)) return []
+  return ingredientes
+    .filter((i) => i?.alimentoId)
+    .map((i) => ({
+      alimentoId: i.alimentoId,
+      nombre: (i.nombre || '').trim(),
+      cantidad: Number(i.cantidad) || 0,
+      unidad: i.unidad || 'g',
+    }))
+}
+
+export async function eliminarReceta(hogarId, recetaId) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'recetas', recetaId))
+}
+
+export function escucharRecetas(hogarId, cb) {
+  const q = query(recetasCol(hogarId), orderBy('nombre', 'asc'))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+// ── Menú semanal ──
+
+// Escucha los días de un rango (claves 'YYYY-MM-DD'). Devuelve un mapa
+// { '2026-08-03': { desayuno: [...], comida: [...] }, … }.
+export function escucharMenuRango(hogarId, desdeClave, hastaClave, cb) {
+  const q = query(
+    menusCol(hogarId),
+    where('fecha', '>=', desdeClave),
+    where('fecha', '<=', hastaClave),
+    orderBy('fecha', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    const mapa = {}
+    snap.docs.forEach((d) => {
+      mapa[d.id] = { id: d.id, ...d.data() }
+    })
+    cb(mapa)
+  })
+}
+
+// Añade una entrada a una comida de un día. `arrayUnion` evita pisar lo que
+// haya añadido otra persona a la vez.
+export async function anadirEntradaMenu(hogarId, claveDia, comida, entrada) {
+  await setDoc(
+    doc(db, 'hogares', hogarId, 'menus', claveDia),
+    { fecha: claveDia, [comida]: arrayUnion(entrada) },
+    { merge: true }
+  )
+}
+
+// Quita una entrada. Se le pasa el objeto TAL CUAL vino del snapshot para que
+// `arrayRemove` lo case exactamente.
+export async function eliminarEntradaMenu(hogarId, claveDia, comida, entrada) {
+  await updateDoc(doc(db, 'hogares', hogarId, 'menus', claveDia), {
+    [comida]: arrayRemove(entrada),
+  })
+}
+
+// Vacía un día entero del menú.
+export async function vaciarDiaMenu(hogarId, claveDia) {
+  await deleteDoc(doc(db, 'hogares', hogarId, 'menus', claveDia))
+}
+
+// Copia el menú de un día a otro (para repetir la semana pasada sin rehacerla).
+export async function copiarDiaMenu(hogarId, origenClave, destinoClave, comidas) {
+  const snap = await getDoc(doc(db, 'hogares', hogarId, 'menus', origenClave))
+  if (!snap.exists()) return false
+  const datos = snap.data()
+  const copia = { fecha: destinoClave }
+  comidas.forEach((c) => {
+    copia[c] = datos[c] || []
+  })
+  await setDoc(doc(db, 'hogares', hogarId, 'menus', destinoClave), copia, { merge: true })
+  return true
 }
 
 // ─────────────────────────────────── Gym ─────────────────────────────────
