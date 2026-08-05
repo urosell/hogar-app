@@ -1,33 +1,19 @@
 import { useState } from 'react'
-import {
-  IconoCasa, IconoCompra, IconoGym, IconoRegalo, IconoProyectos,
-  IconoCalendario, IconoAlarma, IconoDieta, IconoPuntos, Modal,
-} from './ui'
+import { IconoModulo, IconoPuntos, Modal } from './ui'
 import { useIdioma } from '../context/IdiomaContext'
+import { useApp } from '../context/AppContext'
+import { MODULOS } from '../data/modulos'
 
-// Cinco pestañas fijas (lo del día a día) + un botón "⋯" con el resto.
-// Con 8 secciones ya no caben todas en la barra: las secundarias viven en una
-// hoja inferior, y el botón "⋯" se pinta en dorado cuando estás en una de ellas.
-const TABS = [
-  { id: 'tareas', clave: 'nav.tareas', Icono: IconoCasa, grande: true },
-  { id: 'compra', clave: 'nav.compra', Icono: IconoCompra },
-  { id: 'dietas', clave: 'nav.dietas', Icono: IconoDieta },
-  { id: 'calendario', clave: 'nav.calendario', Icono: IconoCalendario },
-]
-
-const SECUNDARIAS = [
-  { id: 'gym', clave: 'nav.gym', Icono: IconoGym },
-  { id: 'proyectos', clave: 'nav.proyectos', Icono: IconoProyectos },
-  { id: 'recordatorios', clave: 'nav.recordatorios', Icono: IconoAlarma },
-  { id: 'marketplace', clave: 'nav.marketplace', Icono: IconoRegalo },
-]
-
-// Estilo cartoon: píldora flotante oliva oscuro, tab activo en círculo dorado.
+// La barra la configura cada usuario en Ajustes (ver src/data/modulos.js):
+// hasta 4 secciones "principales" + un botón "⋯" con el resto. El "⋯" se pinta
+// en dorado con el icono de la sección cuando estás en una de las secundarias.
 export default function BottomNav({ activo, onCambiar }) {
   const { t } = useIdioma()
+  const { modulos } = useApp()
   const [hoja, setHoja] = useState(false)
-  const enSecundaria = SECUNDARIAS.find((s) => s.id === activo)
-  const IconoMenu = enSecundaria?.Icono || IconoPuntos
+  const { principales, secundarias } = modulos
+  const enSecundaria = secundarias.includes(activo)
+  const clave = (id) => MODULOS.find((m) => m.id === id)?.nav || id
 
   return (
     <>
@@ -39,13 +25,15 @@ export default function BottomNav({ activo, onCambiar }) {
           className="mx-auto flex max-w-md items-center justify-around rounded-[28px] bg-contorno px-3 py-1.5"
           style={{ boxShadow: '0 4px 0 rgba(0, 0, 0, 0.28), 0 12px 24px rgba(0, 0, 0, 0.25)' }}
         >
-          {TABS.map(({ id, clave, Icono, grande }) => {
+          {principales.map((id) => {
             const esActivo = activo === id
+            // Tareas manda visualmente cuando está en la barra (icono grande).
+            const grande = id === 'tareas'
             return (
               <button
                 key={id}
                 onClick={() => onCambiar(id)}
-                aria-label={t(clave)}
+                aria-label={t(clave(id))}
                 aria-current={esActivo ? 'page' : undefined}
                 className="flex flex-1 cursor-pointer items-center justify-center"
               >
@@ -54,33 +42,35 @@ export default function BottomNav({ activo, onCambiar }) {
                     grande ? 'h-14 w-14' : 'h-12 w-12'
                   } ${esActivo ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'}`}
                 >
-                  <Icono className={grande ? 'h-8 w-8' : 'h-6 w-6'} />
+                  <IconoModulo id={id} className={grande ? 'h-8 w-8' : 'h-6 w-6'} />
                 </span>
               </button>
             )
           })}
 
-          {/* Resto de secciones */}
-          <button
-            onClick={() => setHoja(true)}
-            aria-label={t('nav.mas')}
-            aria-current={enSecundaria ? 'page' : undefined}
-            className="flex flex-1 cursor-pointer items-center justify-center"
-          >
-            <span
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 ${
-                enSecundaria ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'
-              }`}
+          {/* Resto de secciones (solo si queda alguna fuera de la barra) */}
+          {secundarias.length > 0 && (
+            <button
+              onClick={() => setHoja(true)}
+              aria-label={t('nav.mas')}
+              aria-current={enSecundaria ? 'page' : undefined}
+              className="flex flex-1 cursor-pointer items-center justify-center"
             >
-              <IconoMenu className="h-6 w-6" />
-            </span>
-          </button>
+              <span
+                className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 ${
+                  enSecundaria ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'
+                }`}
+              >
+                {enSecundaria ? <IconoModulo id={activo} className="h-6 w-6" /> : <IconoPuntos className="h-6 w-6" />}
+              </span>
+            </button>
+          )}
         </div>
       </nav>
 
       <Modal abierto={hoja} onCerrar={() => setHoja(false)} titulo={t('nav.mas')}>
         <div className="grid grid-cols-4 gap-2">
-          {SECUNDARIAS.map(({ id, clave, Icono }) => {
+          {secundarias.map((id) => {
             const esActivo = activo === id
             return (
               <button
@@ -90,8 +80,8 @@ export default function BottomNav({ activo, onCambiar }) {
                   esActivo ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/20 bg-crema-claro text-oliva-oscuro'
                 }`}
               >
-                <Icono className="h-7 w-7" />
-                <span className="text-[11px] font-bold">{t(clave)}</span>
+                <IconoModulo id={id} className="h-7 w-7" />
+                <span className="text-[11px] font-bold">{t(clave(id))}</span>
               </button>
             )
           })}

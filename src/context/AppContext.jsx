@@ -8,6 +8,7 @@ import {
   guardarTokenFcm,
 } from '../firebase/firebaseService'
 import { refrescarTokenFcm } from '../firebase/messaging'
+import { normalizarModulos } from '../data/modulos'
 
 const AppContext = createContext(null)
 
@@ -86,6 +87,10 @@ export function AppProvider({ children }) {
   // haga falta uno; para avisar al hogar usa `companeros`.
   const companero = companeros[0] || null
 
+  // Secciones que ve este usuario y cómo se reparten entre la barra y "⋯".
+  // Se normaliza aquí para que App, BottomNav y Ajustes lean lo mismo.
+  const modulos = useMemo(() => normalizarModulos(usuario?.modulos), [usuario?.modulos])
+
   const perfilCompleto = Boolean(usuario?.nombre && usuario?.icono)
   const tieneHogar = Boolean(usuario?.hogarId)
 
@@ -96,6 +101,7 @@ export function AppProvider({ children }) {
     miembros,
     companero,
     companeros,
+    modulos,
     cargando: cargandoAuth || cargandoUsuario,
     perfilCompleto,
     tieneHogar,

@@ -66,7 +66,11 @@ function useFechasProyectos(hogarId) {
   const [itemsPorProyecto, setItemsPorProyecto] = useState({})
 
   useEffect(() => {
-    if (!hogarId) return
+    // hogarId a null = el usuario tiene Proyectos desactivado en Ajustes.
+    if (!hogarId) {
+      setProyectos([])
+      return
+    }
     return escucharProyectos(hogarId, setProyectos)
   }, [hogarId])
 
@@ -96,8 +100,12 @@ function useFechasProyectos(hogarId) {
 }
 
 export default function Calendario() {
-  const { hogarId, uid, miembros } = useApp()
+  const { hogarId, uid, miembros, modulos } = useApp()
   const { t, idioma } = useIdioma()
+  // El calendario es una vista agregada: si tienes Gym o Proyectos apagados en
+  // Ajustes, tampoco deben colarse sus días aquí.
+  const verGym = modulos.activos.includes('gym')
+  const verProyectos = modulos.activos.includes('proyectos')
 
   const hoy = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
   const hoyClave = claveFecha(hoy)
@@ -113,7 +121,7 @@ export default function Calendario() {
   const [detalle, setDetalle] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
 
-  const fechasProyectos = useFechasProyectos(hogarId)
+  const fechasProyectos = useFechasProyectos(verProyectos ? hogarId : null)
   const porUid = useMemo(() => Object.fromEntries(miembros.map((m) => [m.id, m])), [miembros])
   // Orden estable de uids → color consistente por persona en ambos dispositivos.
   const ordenUids = useMemo(() => miembros.map((m) => m.id).sort(), [miembros])
@@ -137,11 +145,14 @@ export default function Calendario() {
   }, [hogarId])
 
   useEffect(() => {
-    if (!hogarId) return
+    if (!hogarId || !verGym) {
+      setGymMapa({})
+      return
+    }
     const desdeClave = claveFecha(new Date(anio, mes, 1))
     const hastaClave = claveFecha(new Date(anio, mes + 1, 0))
     return escucharGymRango(hogarId, desdeClave, hastaClave, setGymMapa)
-  }, [hogarId, anio, mes])
+  }, [hogarId, anio, mes, verGym])
 
   // Mapa día → { eventos, proyectos, gym } para el mes visible.
   const porDia = useMemo(() => {

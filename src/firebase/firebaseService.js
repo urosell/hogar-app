@@ -95,6 +95,12 @@ export async function actualizarNotificaciones(uid, notificaciones) {
   await updateDoc(refUsuario(uid), { notificaciones })
 }
 
+// Preferencia PERSONAL de secciones: qué módulos usa este usuario y cuáles
+// salen en la barra de abajo. Ver src/data/modulos.js.
+export async function guardarModulos(uid, { activos, principales }) {
+  await updateDoc(refUsuario(uid), { modulos: { activos, principales } })
+}
+
 export async function guardarTokenFcm(uid, token) {
   if (!token) return
   await updateDoc(refUsuario(uid), { fcmTokens: arrayUnion(token) })

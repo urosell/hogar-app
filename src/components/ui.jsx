@@ -295,3 +295,27 @@ export function IconoHistorial({ className = ic }) {
     </svg>
   )
 }
+export function IconoEstrella({ className = ic, relleno = false }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={relleno ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9z" />
+    </svg>
+  )
+}
+
+// Icono de una sección por su id. Centraliza el mapa para que la barra, la
+// hoja de "Más" y Ajustes no repitan la lista.
+const ICONOS_MODULO = {
+  tareas: IconoCasa,
+  compra: IconoCompra,
+  dietas: IconoDieta,
+  calendario: IconoCalendario,
+  gym: IconoGym,
+  proyectos: IconoProyectos,
+  recordatorios: IconoAlarma,
+  marketplace: IconoRegalo,
+}
+export function IconoModulo({ id, className = ic }) {
+  const Icono = ICONOS_MODULO[id] || IconoPuntos
+  return <Icono className={className} />
+}

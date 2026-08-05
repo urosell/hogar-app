@@ -3,12 +3,14 @@ import { useApp } from '../context/AppContext'
 import {
   guardarPerfil,
   actualizarNotificaciones,
+  guardarModulos,
   guardarTokenFcm,
   salir,
 } from '../firebase/firebaseService'
 import { activarNotificaciones, notificacionesSoportadas } from '../firebase/messaging'
 import { AVATARES } from '../data/constantes'
-import { Modal, Avatar, IconoSol, IconoLuna } from '../components/ui'
+import { MODULOS, MAX_PRINCIPALES, ordenarModulos } from '../data/modulos'
+import { Modal, Avatar, IconoSol, IconoLuna, IconoEstrella, IconoFlecha, IconoModulo } from '../components/ui'
 import { useTheme } from '../context/ThemeContext'
 import { useIdioma } from '../context/IdiomaContext'
 import { IDIOMAS } from '../data/i18n'
@@ -22,7 +24,7 @@ const TIPOS = [
 ]
 
 export default function Ajustes({ abierto, onCerrar }) {
-  const { uid, usuario, hogar, companeros } = useApp()
+  const { uid, usuario, hogar, companeros, modulos } = useApp()
   const { theme, setTheme } = useTheme()
   const { idioma, setIdioma, t } = useIdioma()
   const [nombre, setNombre] = useState('')
@@ -53,6 +55,43 @@ export default function Ajustes({ abierto, onCerrar }) {
 
   async function toggleNoti(clave) {
     await actualizarNotificaciones(uid, { ...notis, [clave]: !notis[clave] })
+  }
+
+  // Activa/desactiva una sección. Al apagarla también sale de la barra.
+  // No se deja apagar la última: la app se quedaría sin nada que enseñar.
+  async function toggleModulo(id) {
+    const encendido = modulos.activos.includes(id)
+    if (encendido && modulos.activos.length === 1) return
+    const activos = encendido
+      ? modulos.activos.filter((x) => x !== id)
+      : ordenarModulos([...modulos.activos, id])
+    const principales = encendido ? modulos.principales.filter((x) => x !== id) : modulos.principales
+    await guardarModulos(uid, { activos, principales })
+  }
+
+  // Marca/desmarca una sección para la barra de abajo (máximo MAX_PRINCIPALES).
+  // Al marcarla entra por la derecha; desde ahí se recoloca con las flechas.
+  async function togglePrincipal(id) {
+    if (!modulos.activos.includes(id)) return
+    const esPrincipal = modulos.principales.includes(id)
+    if (!esPrincipal && modulos.principales.length >= MAX_PRINCIPALES) return
+    if (esPrincipal && modulos.principales.length === 1) return // la barra no puede quedarse vacía
+    const principales = esPrincipal
+      ? modulos.principales.filter((x) => x !== id)
+      : [...modulos.principales, id]
+    await guardarModulos(uid, { activos: modulos.activos, principales })
+  }
+
+  // Mueve una sección de la barra una posición a la izquierda (-1) o a la
+  // derecha (+1). El orden de `principales` ES el orden de la barra.
+  async function moverPrincipal(id, delta) {
+    const desde = modulos.principales.indexOf(id)
+    const hasta = desde + delta
+    if (desde < 0 || hasta < 0 || hasta >= modulos.principales.length) return
+    const principales = [...modulos.principales]
+    principales[desde] = principales[hasta]
+    principales[hasta] = id
+    await guardarModulos(uid, { activos: modulos.activos, principales })
   }
 
   async function handleActivarPush() {
@@ -150,6 +189,84 @@ export default function Ajustes({ abierto, onCerrar }) {
                 {i.label}
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* Módulos: qué secciones uso y cuáles van en la barra de abajo.
+            Es una preferencia personal, no del hogar. */}
+        <section>
+          <h3 className="mb-1 text-sm font-bold text-oliva-oscuro/70">{t('aj.modulos')}</h3>
+          <p className="mb-2 text-xs text-oliva-oscuro/60">{t('aj.modulosDesc', { max: MAX_PRINCIPALES })}</p>
+
+          {/* Vista previa de la barra de abajo, en su orden real. Las flechas
+              mueven cada sección a izquierda o derecha. */}
+          <div className="mb-3 rounded-2xl bg-crema-oscuro/40 p-2">
+            <p className="mb-2 px-1 text-xs font-bold text-oliva-oscuro/70">{t('aj.ordenBarra')}</p>
+            <div className="flex gap-1.5">
+              {modulos.principales.map((id, i) => (
+                <div key={id} className="flex flex-1 flex-col items-center gap-1 rounded-xl2 border-2 border-contorno/20 bg-crema-claro py-2">
+                  <IconoModulo id={id} className="h-6 w-6 text-oliva-oscuro" />
+                  <span className="max-w-full truncate px-1 text-[10px] font-bold text-bosque">
+                    {t(MODULOS.find((m) => m.id === id).nav)}
+                  </span>
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => moverPrincipal(id, -1)}
+                      disabled={i === 0}
+                      aria-label={t('aj.moverIzq')}
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
+                    >
+                      <IconoFlecha dir="left" className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => moverPrincipal(id, 1)}
+                      disabled={i === modulos.principales.length - 1}
+                      aria-label={t('aj.moverDer')}
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
+                    >
+                      <IconoFlecha dir="right" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {MODULOS.map((m) => {
+              const encendido = modulos.activos.includes(m.id)
+              const principal = modulos.principales.includes(m.id)
+              const barraLlena = modulos.principales.length >= MAX_PRINCIPALES
+              const estrellaBloqueada =
+                !encendido ||
+                (!principal && barraLlena) ||
+                (principal && modulos.principales.length === 1)
+              return (
+                <div key={m.id} className={`flex items-center justify-between rounded-2xl bg-crema-claro px-3 py-2.5 ${encendido ? '' : 'opacity-50'}`}>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="text-xl">{m.emoji}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-bosque">{t(m.nav)}</p>
+                      <p className="truncate text-xs text-oliva-oscuro/60">{t(m.desc)}</p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => togglePrincipal(m.id)}
+                      disabled={estrellaBloqueada}
+                      aria-pressed={principal}
+                      aria-label={t('aj.enLaBarra')}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                        principal ? 'bg-dorado text-contorno' : 'text-oliva-oscuro/35'
+                      } ${estrellaBloqueada ? 'cursor-not-allowed opacity-60' : 'hover:bg-crema-oscuro'}`}
+                    >
+                      <IconoEstrella className="h-5 w-5" relleno={principal} />
+                    </button>
+                    <Toggle activo={encendido} onClick={() => toggleModulo(m.id)} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </section>
 

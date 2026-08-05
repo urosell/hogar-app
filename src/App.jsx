@@ -6,6 +6,7 @@ import { escucharMovimientos } from './firebase/firebaseService'
 import { Cargando, Vacio, Modal, MovimientoRow, IconoAjustes, IconoSol, IconoLuna, IconoCampana, IconoHistorial } from './components/ui'
 import { useTheme } from './context/ThemeContext'
 import { useIdioma } from './context/IdiomaContext'
+import { MODULOS } from './data/modulos'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
 import OnboardingHogar from './pages/OnboardingHogar'
@@ -22,10 +23,10 @@ import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
 export default function App() {
-  const { cargando, authUser, tieneHogar, perfilCompleto, usuario, hogarId, miembros } = useApp()
+  const { cargando, authUser, tieneHogar, perfilCompleto, usuario, hogarId, miembros, modulos } = useApp()
   const { theme, toggle } = useTheme()
   const { t } = useIdioma()
-  const TITULOS = { tareas: t('titulo.tareas'), compra: t('titulo.compra'), dietas: t('titulo.dietas'), gym: t('titulo.gym'), proyectos: t('titulo.proyectos'), calendario: t('titulo.calendario'), recordatorios: t('titulo.recordatorios'), marketplace: t('titulo.marketplace') }
+  const TITULOS = Object.fromEntries(MODULOS.map((m) => [m.id, t(m.titulo)]))
   const [tab, setTab] = useState('tareas')
   const [dir, setDir] = useState('der') // dirección del slide entre pestañas
   const [seccionTareas, setSeccionTareas] = useState('activas') // 'activas' | 'aprobar'
@@ -40,13 +41,20 @@ export default function App() {
 
   // Orden visual de los tabs (igual que en la barra inferior). La dirección
   // del deslizamiento depende de si la nueva pestaña está a la derecha o izq.
-  // Mismo orden que la barra: las 4 fijas, y después las que viven bajo "⋯".
-  const ORDEN = ['tareas', 'compra', 'dietas', 'calendario', 'gym', 'proyectos', 'recordatorios', 'marketplace']
+  // Mismo orden que la barra: las principales, y después las que viven bajo "⋯".
+  const ORDEN = [...modulos.principales, ...modulos.secundarias]
+  const activa = (id) => modulos.activos.includes(id)
   function cambiarTab(nuevo) {
     if (nuevo === tab) return
     setDir(ORDEN.indexOf(nuevo) > ORDEN.indexOf(tab) ? 'der' : 'izq')
     setTab(nuevo)
   }
+
+  // Si desactivas en Ajustes la sección que estás viendo, salta a la primera
+  // que siga activa (normalizarModulos garantiza que siempre queda una).
+  useEffect(() => {
+    if (!activa(tab)) setTab(modulos.activos[0])
+  }, [modulos.activos, tab])
 
   // Notificaciones en primer plano → banner efímero.
   useEffect(() => {
@@ -98,6 +106,8 @@ export default function App() {
           >
             <IconoHistorial />
           </button>
+          {/* La campana solo tiene sentido si Tareas está activo */}
+          {activa('tareas') && (
           <button
             onClick={() => {
               const enAprobar = tab === 'tareas' && seccionTareas === 'aprobar'
@@ -122,6 +132,7 @@ export default function App() {
               </span>
             )}
           </button>
+          )}
           <button
             onClick={toggle}
             className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
@@ -139,20 +150,23 @@ export default function App() {
         </div>
       </header>
 
-      {/* Contenido — las tres pestañas se mantienen montadas y solo se
+      {/* Contenido — las pestañas activas se mantienen montadas y solo se
           muestran/ocultan, para conservar datos y listeners entre cambios
-          de pestaña (evita el parpadeo de recarga). */}
+          de pestaña (evita el parpadeo de recarga). Las secciones desactivadas
+          en Ajustes no se montan: así tampoco abren listeners de Firestore. */}
       <main className="flex-1 overflow-x-hidden px-4 pb-28">
-        <div className={tab === 'tareas' ? `tab-slide-${dir}` : 'hidden'}>
-          <Tareas seccion={seccionTareas} setSeccion={setSeccionTareas} onPendientes={setPendientesAprobar} />
-        </div>
-        <div className={tab === 'compra' ? `tab-slide-${dir}` : 'hidden'}><Compra /></div>
-        <div className={tab === 'dietas' ? `tab-slide-${dir}` : 'hidden'}><Dietas activo={tab === 'dietas'} /></div>
-        <div className={tab === 'gym' ? `tab-slide-${dir}` : 'hidden'}><Gym /></div>
-        <div className={tab === 'proyectos' ? `tab-slide-${dir}` : 'hidden'}><Proyectos /></div>
-        <div className={tab === 'calendario' ? `tab-slide-${dir}` : 'hidden'}><Calendario /></div>
-        <div className={tab === 'recordatorios' ? `tab-slide-${dir}` : 'hidden'}><Recordatorios /></div>
-        <div className={tab === 'marketplace' ? `tab-slide-${dir}` : 'hidden'}><Marketplace /></div>
+        {activa('tareas') && (
+          <div className={tab === 'tareas' ? `tab-slide-${dir}` : 'hidden'}>
+            <Tareas seccion={seccionTareas} setSeccion={setSeccionTareas} onPendientes={setPendientesAprobar} />
+          </div>
+        )}
+        {activa('compra') && <div className={tab === 'compra' ? `tab-slide-${dir}` : 'hidden'}><Compra /></div>}
+        {activa('dietas') && <div className={tab === 'dietas' ? `tab-slide-${dir}` : 'hidden'}><Dietas activo={tab === 'dietas'} /></div>}
+        {activa('gym') && <div className={tab === 'gym' ? `tab-slide-${dir}` : 'hidden'}><Gym /></div>}
+        {activa('proyectos') && <div className={tab === 'proyectos' ? `tab-slide-${dir}` : 'hidden'}><Proyectos /></div>}
+        {activa('calendario') && <div className={tab === 'calendario' ? `tab-slide-${dir}` : 'hidden'}><Calendario /></div>}
+        {activa('recordatorios') && <div className={tab === 'recordatorios' ? `tab-slide-${dir}` : 'hidden'}><Recordatorios /></div>}
+        {activa('marketplace') && <div className={tab === 'marketplace' ? `tab-slide-${dir}` : 'hidden'}><Marketplace /></div>}
       </main>
 
       <BottomNav activo={tab} onCambiar={cambiarTab} />
