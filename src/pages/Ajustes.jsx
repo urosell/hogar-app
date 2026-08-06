@@ -10,10 +10,11 @@ import {
 import { activarNotificaciones, notificacionesSoportadas } from '../firebase/messaging'
 import { AVATARES } from '../data/constantes'
 import { MODULOS, MAX_PRINCIPALES, ordenarModulos } from '../data/modulos'
-import { Modal, Avatar, IconoSol, IconoLuna, IconoEstrella, IconoFlecha, IconoModulo } from '../components/ui'
+import { Modal, Avatar, Desplegable, IconoSol, IconoLuna, IconoEstrella, IconoFlecha, IconoModulo } from '../components/ui'
 import { useTheme } from '../context/ThemeContext'
 import { useIdioma } from '../context/IdiomaContext'
 import { IDIOMAS } from '../data/i18n'
+import { perfilCompleto, objetivoMacros } from '../data/nutricion'
 import PerfilNutricional from './dietas/PerfilNutricional'
 
 const TIPOS = [
@@ -31,6 +32,10 @@ export default function Ajustes({ abierto, onCerrar }) {
   const [icono, setIcono] = useState('')
   const [editandoAvatar, setEditandoAvatar] = useState(false)
   const [estadoPush, setEstadoPush] = useState('idle') // idle | pidiendo | ok | error
+  // Acordeón: id de la única sección abierta (null = todas plegadas). Antes
+  // estaba todo desplegado a la vez y había que scrollear media pantalla.
+  const [seccion, setSeccion] = useState(null)
+  const toggleSeccion = (id) => setSeccion((s) => (s === id ? null : id))
 
   useEffect(() => {
     if (usuario) {
@@ -38,6 +43,14 @@ export default function Ajustes({ abierto, onCerrar }) {
       setIcono(usuario.icono || '')
     }
   }, [usuario, abierto])
+
+  // Al cerrar Ajustes se pliega todo: la próxima vez se abre limpio.
+  useEffect(() => {
+    if (!abierto) {
+      setSeccion(null)
+      setEditandoAvatar(false)
+    }
+  }, [abierto])
 
   const notis = usuario?.notificaciones || { tareas: true, compra: true, gym: true, marketplace: true }
 
@@ -105,12 +118,25 @@ export default function Ajustes({ abierto, onCerrar }) {
     }
   }
 
+  // Resúmenes que se ven en la cabecera de cada sección plegada, para no
+  // tener que abrirla solo para comprobar cómo está.
+  const nut = usuario?.perfilNutricional
+  const resumenNutricion = nut && perfilCompleto(nut)
+    ? `${objetivoMacros(nut).kcal} kcal/${t('nut.dia')}`
+    : t('aj.resSinCompletar')
+  const notisActivas = TIPOS.filter((x) => notis[x.clave]).length
+  const idiomaActual = IDIOMAS.find((i) => i.id === idioma)?.label || idioma
+
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} titulo={t('aj.titulo')}>
-      <div className="space-y-6">
+      <div>
         {/* Perfil */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('aj.tuPerfil')}</h3>
+        <Desplegable
+          titulo={t('aj.tuPerfil')}
+          resumen={nombre || usuario?.nombre}
+          abierto={seccion === 'perfil'}
+          onToggle={() => toggleSeccion('perfil')}
+        >
           <div className="flex items-center gap-3">
             <button onClick={() => setEditandoAvatar((v) => !v)} className="active:scale-95">
               <Avatar icono={icono} nombre={nombre} size="lg" />
@@ -126,17 +152,25 @@ export default function Ajustes({ abierto, onCerrar }) {
               ))}
             </div>
           )}
-        </section>
+        </Desplegable>
 
         {/* Perfil nutricional: de aquí sale el objetivo diario que pinta Dietas. */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('nut.titulo')}</h3>
+        <Desplegable
+          titulo={t('nut.titulo')}
+          resumen={resumenNutricion}
+          abierto={seccion === 'nutricion'}
+          onToggle={() => toggleSeccion('nutricion')}
+        >
           <PerfilNutricional />
-        </section>
+        </Desplegable>
 
         {/* Hogar */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('aj.tuHogar')}</h3>
+        <Desplegable
+          titulo={t('aj.tuHogar')}
+          resumen={companeros.length ? t('aj.resCompaneros', { n: companeros.length + 1 }) : t('aj.resSolo')}
+          abierto={seccion === 'hogar'}
+          onToggle={() => toggleSeccion('hogar')}
+        >
           <div className="tarjeta flex items-center justify-between">
             <div>
               <p className="text-xs text-oliva-oscuro/60">{t('aj.codigoInvitacion')}</p>
@@ -155,11 +189,16 @@ export default function Ajustes({ abierto, onCerrar }) {
               <p className="max-w-[8rem] text-right text-xs text-oliva-oscuro/60">{t('aj.comparteCodigo')}</p>
             )}
           </div>
-        </section>
+        </Desplegable>
 
-        {/* Apariencia */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('aj.apariencia')}</h3>
+        {/* Apariencia: tema + idioma, que siempre se tocan a la vez. */}
+        <Desplegable
+          titulo={t('aj.apariencia')}
+          resumen={`${theme === 'day' ? t('aj.dia') : t('aj.noche')} · ${idiomaActual}`}
+          abierto={seccion === 'apariencia'}
+          onToggle={() => toggleSeccion('apariencia')}
+        >
+          <p className="etiqueta">{t('aj.tema')}</p>
           <div className="flex gap-2 rounded-2xl bg-crema-oscuro/60 p-1">
             <button
               onClick={() => setTheme('day')}
@@ -174,11 +213,8 @@ export default function Ajustes({ abierto, onCerrar }) {
               <IconoLuna className="h-5 w-5" /> {t('aj.noche')}
             </button>
           </div>
-        </section>
 
-        {/* Idioma */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('aj.idioma')}</h3>
+          <p className="etiqueta mt-3">{t('aj.idioma')}</p>
           <div className="flex gap-2 rounded-2xl bg-crema-oscuro/60 p-1">
             {IDIOMAS.map((i) => (
               <button
@@ -190,12 +226,16 @@ export default function Ajustes({ abierto, onCerrar }) {
               </button>
             ))}
           </div>
-        </section>
+        </Desplegable>
 
         {/* Módulos: qué secciones uso y cuáles van en la barra de abajo.
             Es una preferencia personal, no del hogar. */}
-        <section>
-          <h3 className="mb-1 text-sm font-bold text-oliva-oscuro/70">{t('aj.modulos')}</h3>
+        <Desplegable
+          titulo={t('aj.modulos')}
+          resumen={t('aj.resActivas', { n: modulos.activos.length, total: MODULOS.length })}
+          abierto={seccion === 'modulos'}
+          onToggle={() => toggleSeccion('modulos')}
+        >
           <p className="mb-2 text-xs text-oliva-oscuro/60">{t('aj.modulosDesc', { max: MAX_PRINCIPALES })}</p>
 
           {/* Vista previa de la barra de abajo, en su orden real. Las flechas
@@ -268,12 +308,15 @@ export default function Ajustes({ abierto, onCerrar }) {
               )
             })}
           </div>
-        </section>
+        </Desplegable>
 
         {/* Notificaciones */}
-        <section>
-          <h3 className="mb-2 text-sm font-bold text-oliva-oscuro/70">{t('aj.notificaciones')}</h3>
-
+        <Desplegable
+          titulo={t('aj.notificaciones')}
+          resumen={t('aj.resNotis', { n: notisActivas, total: TIPOS.length })}
+          abierto={seccion === 'notificaciones'}
+          onToggle={() => toggleSeccion('notificaciones')}
+        >
           {notificacionesSoportadas() && (
             <button onClick={handleActivarPush} disabled={estadoPush === 'ok' || estadoPush === 'pidiendo'}
               className="btn-secundario mb-3 w-full text-sm">
@@ -298,9 +341,9 @@ export default function Ajustes({ abierto, onCerrar }) {
               </div>
             ))}
           </div>
-        </section>
+        </Desplegable>
 
-        <button onClick={() => salir()} className="btn w-full bg-marron/10 text-marron-oscuro hover:bg-marron/20">
+        <button onClick={() => salir()} className="btn mt-1 w-full bg-marron/10 text-marron-oscuro hover:bg-marron/20">
           {t('common.cerrarSesion')}
         </button>
       </div>

@@ -50,6 +50,34 @@ export function Modal({ abierto, onCerrar, titulo, children }) {
   )
 }
 
+// Sección plegable. Sin recuadro: solo una línea de separación, para que la
+// lista de ajustes se lea de un vistazo. La cabecera enseña el título y un
+// resumen de lo que hay dentro, para decidir si merece la pena abrirla.
+// `abierto`/`onToggle` vienen de fuera: así quien la usa decide si solo puede
+// haber una abierta a la vez (acordeón) o varias.
+export function Desplegable({ titulo, resumen, abierto, onToggle, children }) {
+  return (
+    <section className="border-b border-contorno/15">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={abierto}
+        className="flex w-full items-center gap-3 py-3.5 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-bosque">{titulo}</span>
+          {resumen && <span className="mt-0.5 block truncate text-xs text-oliva-oscuro/70">{resumen}</span>}
+        </span>
+        <IconoFlecha
+          dir={abierto ? 'up' : 'down'}
+          className="h-5 w-5 shrink-0 text-oliva-oscuro/50"
+        />
+      </button>
+      {abierto && <div className="fade-in pb-4">{children}</div>}
+    </section>
+  )
+}
+
 // Bloque de carga reutilizable. `className` define forma/tamaño (alto, ancho, radio).
 export function Skeleton({ className = 'h-4 w-full' }) {
   return <div className={`skeleton ${className}`} aria-hidden="true" />
@@ -206,7 +234,12 @@ export function IconoMas({ className = ic }) {
   )
 }
 export function IconoFlecha({ className = ic, dir = 'left' }) {
-  const d = dir === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'
+  const d = {
+    left: 'M15 18l-6-6 6-6',
+    right: 'M9 18l6-6-6-6',
+    up: 'M18 15l-6-6-6 6',
+    down: 'M6 9l6 6 6-6',
+  }[dir]
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d={d} />

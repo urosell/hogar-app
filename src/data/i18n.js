@@ -107,6 +107,7 @@ const ES = {
   'aj.codigoInvitacion': 'Código de invitación',
   'aj.comparteCodigo': 'Comparte el código para que se una tu pareja',
   'aj.apariencia': 'Apariencia',
+  'aj.tema': 'Tema',
   'aj.dia': 'Día',
   'aj.noche': 'Noche',
   'aj.idioma': 'Idioma',
@@ -137,6 +138,11 @@ const ES = {
   'aj.modProyectosDesc': 'Proyectos con items y fechas clave',
   'aj.modRecordatoriosDesc': 'Alarmas que avisan al hogar',
   'aj.modMarketplaceDesc': 'Catálogo de premios y canjes',
+  'aj.resActivas': '{n} de {total} activas',
+  'aj.resNotis': '{n} de {total} activadas',
+  'aj.resSolo': 'Solo tú',
+  'aj.resCompaneros': '{n} en el hogar',
+  'aj.resSinCompletar': 'Sin completar',
 
   // Bottom nav (aria)
   'nav.tareas': 'Tareas',
@@ -685,6 +691,7 @@ const CA = {
   'aj.codigoInvitacion': 'Codi d\'invitació',
   'aj.comparteCodigo': 'Comparteix el codi perquè s\'hi uneixi la teva parella',
   'aj.apariencia': 'Aparença',
+  'aj.tema': 'Tema',
   'aj.dia': 'Dia',
   'aj.noche': 'Nit',
   'aj.idioma': 'Idioma',
@@ -715,6 +722,11 @@ const CA = {
   'aj.modProyectosDesc': 'Projectes amb ítems i dates clau',
   'aj.modRecordatoriosDesc': 'Alarmes que avisen la llar',
   'aj.modMarketplaceDesc': 'Catàleg de premis i bescanvis',
+  'aj.resActivas': '{n} de {total} actives',
+  'aj.resNotis': '{n} de {total} activades',
+  'aj.resSolo': 'Només tu',
+  'aj.resCompaneros': '{n} a la llar',
+  'aj.resSinCompletar': 'Sense completar',
 
   // Bottom nav (aria)
   'nav.tareas': 'Tasques',
