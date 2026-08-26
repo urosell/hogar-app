@@ -22,6 +22,8 @@ import {
   consolidarCompra,
   formatearCantidad,
   normalizar,
+  filtrarAlimentos,
+  UNIDADES,
   EMOJI_COMIDA,
   MACROS_CERO,
   consumoDelDia,
@@ -453,7 +455,22 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
   )
   const [para, setPara] = useState(() => entrada?.para ?? 'hogar') // 'hogar' | array de uids
   const [q, setQ] = useState('')
+  const [qAli, setQAli] = useState('')
   const [soloDeEstaComida, setSoloDeEstaComida] = useState(true)
+
+  const alimentosFiltrados = useMemo(() => filtrarAlimentos(alimentos, qAli), [alimentos, qAli])
+
+  // Elegir de la lista deja una cantidad de partida editable justo debajo, en
+  // vez de mandar a un segundo modal solo para escribir un número.
+  function elegirAlimentoLocal(a) {
+    // Volver a pulsar el que ya está elegido no debe pisar la cantidad que se
+    // haya escrito (o la que traía la entrada que se está editando).
+    setAlimento((p) =>
+      p?.alimento?.id === a.id
+        ? p
+        : { alimento: a, cantidad: a.unidad === 'ud' ? 1 : 100, unidad: a.unidad || 'g' }
+    )
+  }
 
   // Recetas propuestas para esta comida. Las que no tienen ninguna marcada
   // valen para todas, así que nunca se esconden.
@@ -479,9 +496,13 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
     setPara(siguiente.length === 0 ? 'hogar' : siguiente)
   }
 
+  // La cantidad del alimento se escribe a mano, así que puede quedar vacía o a
+  // cero mientras se edita: sin esto se podría guardar un plato de 0 g.
+  const cantidadAlimento = Number(String(alimento?.cantidad ?? '').replace(',', '.')) || 0
+
   const listo =
     (modo === 'receta' && receta) ||
-    (modo === 'alimento' && alimento) ||
+    (modo === 'alimento' && alimento && cantidadAlimento > 0) ||
     (modo === 'libre' && libre.trim())
 
   function confirmar() {
@@ -498,13 +519,13 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
         para,
       })
     } else if (modo === 'alimento') {
-      const m = macrosDe(alimento.alimento, alimento.cantidad, alimento.unidad)
+      const m = macrosDe(alimento.alimento, cantidadAlimento, alimento.unidad)
       onGuardar({
         tipo: 'alimento',
         refId: alimento.alimento.id,
         nombre: alimento.alimento.nombre,
         emoji: '🥕',
-        cantidad: alimento.cantidad,
+        cantidad: cantidadAlimento,
         unidad: alimento.unidad,
         kcal: Math.round(m.kcal),
         para,
@@ -600,21 +621,79 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
           </div>
         )}
 
+        {/* Mismo patrón que las recetas: buscador y lista aquí mismo. Antes
+            hacía falta abrir un segundo modal encima solo para elegir. El
+            modal completo sigue disponible para lo que no está en la despensa
+            (Open Food Facts o alta a mano). */}
         {modo === 'alimento' && (
           <div className="space-y-2">
-            {alimento ? (
-              <div className="flex items-center gap-2 rounded-2xl bg-crema-claro px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold text-bosque">{alimento.alimento.nombre}</p>
-                  <p className="text-xs text-oliva-oscuro/60">
-                    {formatearCantidad(alimento.cantidad, alimento.unidad)} ·{' '}
-                    {Math.round(macrosDe(alimento.alimento, alimento.cantidad, alimento.unidad).kcal)} kcal
-                  </p>
+            <input
+              value={qAli}
+              onChange={(e) => setQAli(e.target.value)}
+              placeholder={t('dietas.buscarPlaceholder')}
+              className="input py-2"
+            />
+
+            {alimentosFiltrados.length === 0 && (
+              <p className="text-sm text-oliva-oscuro/70">{t('dietas.noEstaEnDespensa')}</p>
+            )}
+
+            <div className="max-h-52 space-y-1.5 overflow-y-auto">
+              {alimentosFiltrados.map((a) => {
+                const sel = alimento?.alimento?.id === a.id
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => elegirAlimentoLocal(a)}
+                    className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left ${
+                      sel ? 'bg-oliva text-crema-claro' : 'bg-crema-claro'
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm font-bold">{a.nombre}</span>
+                    <span className="shrink-0 text-xs opacity-70">
+                      {Math.round(a.por100?.kcal || 0)} kcal/100{a.unidad === 'ml' ? 'ml' : 'g'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <button onClick={() => setBuscador(true)} className="btn-fantasma w-full py-2 text-sm">
+              {t('dietas.otrasFuentes')}
+            </button>
+
+            {alimento && (
+              <div>
+                <span className="etiqueta">{t('dietas.cantidad')}</span>
+                <div className="flex gap-2">
+                  <input
+                    inputMode="decimal"
+                    value={alimento.cantidad}
+                    onChange={(e) => setAlimento((p) => ({ ...p, cantidad: e.target.value }))}
+                    className="input flex-1 py-2"
+                  />
+                  <div className="flex gap-1">
+                    {UNIDADES.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setAlimento((p) => ({ ...p, unidad: u }))}
+                        className={`chip border-2 px-3 py-1.5 ${
+                          alimento.unidad === u
+                            ? 'border-oliva bg-oliva text-crema-claro'
+                            : 'border-contorno/40 bg-crema-claro text-oliva-oscuro'
+                        }`}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <button onClick={() => setBuscador(true)} className="chip bg-salvia-claro/60 text-oliva-oscuro">{t('dietas.cambiar')}</button>
+                <p className="mt-1.5 text-xs font-bold text-oliva">
+                  {alimento.alimento.nombre} ·{' '}
+                  {Math.round(macrosDe(alimento.alimento, alimento.cantidad, alimento.unidad).kcal)} kcal
+                </p>
               </div>
-            ) : (
-              <button onClick={() => setBuscador(true)} className="btn-secundario w-full py-2.5">{t('dietas.elegirAlimento')}</button>
             )}
           </div>
         )}
@@ -669,6 +748,7 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
         alimentos={alimentos}
         hogarId={hogarId}
         uid={uid}
+        qInicial={qAli}
         onElegir={(a, cantidad, unidad) => setAlimento({ alimento: a, cantidad, unidad })}
       />
     </Modal>

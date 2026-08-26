@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { crearAlimento } from '../../firebase/firebaseService'
 import { buscarEnOff, buscarPorCodigo, ERROR_SIN_PROXY } from '../../servicios/openfoodfacts'
 import { CATEGORIAS } from '../../data/constantes'
-import { UNIDADES, normalizar } from '../../data/nutricion'
+import { UNIDADES, filtrarAlimentos } from '../../data/nutricion'
 import { Modal, IconoFlecha } from '../../components/ui'
 import { useIdioma } from '../../context/IdiomaContext'
 
@@ -23,6 +23,7 @@ export default function BuscadorAlimento({
   uid,
   pedirCantidad = true,
   titulo,
+  qInicial = '',
   onElegir,
 }) {
   const { t } = useIdioma()
@@ -37,25 +38,19 @@ export default function BuscadorAlimento({
   const [guardando, setGuardando] = useState(false)
   const abortRef = useRef(null)
 
-  // Cada vez que se abre, empieza limpio.
+  // Cada vez que se abre, empieza limpio. `qInicial` deja arrancar con lo que
+  // ya se había escrito en el buscador de fuera, para no teclearlo dos veces.
   useEffect(() => {
     if (!abierto) return
-    setQ('')
+    setQ(qInicial)
     setElegido(null)
     setResultadosOff(null)
     setErrorOff('')
     setManual(false)
-  }, [abierto])
+  }, [abierto, qInicial])
 
   // Búsqueda en el catálogo propio (instantánea, sin red).
-  const locales = useMemo(() => {
-    const term = normalizar(q).trim()
-    const lista = alimentos || []
-    if (!term) return lista.slice(0, 30)
-    return lista
-      .filter((a) => normalizar(`${a.nombre} ${a.marca || ''}`).includes(term))
-      .slice(0, 30)
-  }, [alimentos, q])
+  const locales = useMemo(() => filtrarAlimentos(alimentos, q), [alimentos, q])
 
   async function buscarOff() {
     const term = q.trim()

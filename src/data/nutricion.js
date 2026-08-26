@@ -16,6 +16,18 @@ export function normalizar(s) {
     .trim()
 }
 
+// Filtro del catálogo por nombre y marca. Con el término vacío devuelve el
+// principio de la lista en vez de nada: el buscador se abre ya con algo que
+// elegir, que es el caso normal (el alimento suele estar ya en la despensa).
+export function filtrarAlimentos(alimentos, q, limite = 30) {
+  const term = normalizar(q).trim()
+  const lista = alimentos || []
+  if (!term) return lista.slice(0, limite)
+  return lista
+    .filter((a) => normalizar(`${a.nombre} ${a.marca || ''}`).includes(term))
+    .slice(0, limite)
+}
+
 // Comidas de un día, en el orden en que se pintan.
 export const COMIDAS = ['desayuno', 'comida', 'merienda', 'cena', 'otros']
 
