@@ -10,7 +10,7 @@ import {
 import { activarNotificaciones, notificacionesSoportadas } from '../firebase/messaging'
 import { AVATARES } from '../data/constantes'
 import { MODULOS, MAX_PRINCIPALES, ordenarModulos } from '../data/modulos'
-import { Modal, Avatar, Desplegable, IconoSol, IconoLuna, IconoEstrella, IconoFlecha, IconoModulo } from '../components/ui'
+import { Modal, Avatar, Desplegable, IconoEstrella, IconoFlecha } from '../components/ui'
 import { useTheme } from '../context/ThemeContext'
 import { useIdioma } from '../context/IdiomaContext'
 import { IDIOMAS } from '../data/i18n'
@@ -18,10 +18,10 @@ import { perfilCompleto, objetivoMacros } from '../data/nutricion'
 import PerfilNutricional from './dietas/PerfilNutricional'
 
 const TIPOS = [
-  { clave: 'tareas', labelKey: 'aj.notiTareas', descKey: 'aj.notiTareasDesc', emoji: '✅' },
-  { clave: 'compra', labelKey: 'aj.notiCompra', descKey: 'aj.notiCompraDesc', emoji: '🛒' },
-  { clave: 'gym', labelKey: 'aj.notiGym', descKey: 'aj.notiGymDesc', emoji: '💪' },
-  { clave: 'marketplace', labelKey: 'aj.notiMarketplace', descKey: 'aj.notiMarketplaceDesc', emoji: '🎁' },
+  { clave: 'tareas', labelKey: 'aj.notiTareas', descKey: 'aj.notiTareasDesc' },
+  { clave: 'compra', labelKey: 'aj.notiCompra', descKey: 'aj.notiCompraDesc' },
+  { clave: 'gym', labelKey: 'aj.notiGym', descKey: 'aj.notiGymDesc' },
+  { clave: 'marketplace', labelKey: 'aj.notiMarketplace', descKey: 'aj.notiMarketplaceDesc' },
 ]
 
 export default function Ajustes({ abierto, onCerrar }) {
@@ -36,6 +36,9 @@ export default function Ajustes({ abierto, onCerrar }) {
   // estaba todo desplegado a la vez y había que scrollear media pantalla.
   const [seccion, setSeccion] = useState(null)
   const toggleSeccion = (id) => setSeccion((s) => (s === id ? null : id))
+  // Acordeón anidado dentro de «Configuración» (secciones / notificaciones).
+  const [subseccion, setSubseccion] = useState(null)
+  const toggleSubseccion = (id) => setSubseccion((s) => (s === id ? null : id))
 
   useEffect(() => {
     if (usuario) {
@@ -48,6 +51,7 @@ export default function Ajustes({ abierto, onCerrar }) {
   useEffect(() => {
     if (!abierto) {
       setSeccion(null)
+      setSubseccion(null)
       setEditandoAvatar(false)
     }
   }, [abierto])
@@ -130,48 +134,34 @@ export default function Ajustes({ abierto, onCerrar }) {
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} titulo={t('aj.titulo')}>
       <div>
-        {/* Perfil */}
-        <Desplegable
-          titulo={t('aj.tuPerfil')}
-          resumen={nombre || usuario?.nombre}
-          abierto={seccion === 'perfil'}
-          onToggle={() => toggleSeccion('perfil')}
-        >
+        {/* Perfil y hogar viven fuera del acordeón: el nombre y el código de
+            invitación son lo que más se consulta y no deben esconderse. */}
+        <div className="border-b border-contorno/15 pb-4">
           <div className="flex items-center gap-3">
             <button onClick={() => setEditandoAvatar((v) => !v)} className="active:scale-95">
               <Avatar icono={icono} nombre={nombre} size="lg" />
             </button>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} onBlur={guardarNombre} className="input flex-1" maxLength={20} placeholder={t('aj.tuNombre')} />
+            {/* Sin caja: solo una línea inferior que se marca al enfocar. */}
+            <input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              onBlur={guardarNombre}
+              className="flex-1 border-0 border-b-2 border-contorno/20 bg-transparent px-0 py-2 text-lg font-bold text-bosque placeholder:font-normal placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-0"
+              maxLength={20}
+              placeholder={t('aj.tuNombre')}
+            />
           </div>
           {editandoAvatar && (
             <div className="mt-3 grid grid-cols-6 gap-2">
               {AVATARES.map((a) => (
-                <button key={a} onClick={() => cambiarIcono(a)} className={`flex aspect-square items-center justify-center rounded-2xl text-2xl ${icono === a ? 'bg-oliva' : 'bg-crema-oscuro/60'}`}>
+                <button key={a} onClick={() => cambiarIcono(a)} className={`flex aspect-square items-center justify-center rounded-full text-2xl transition ${icono === a ? 'ring-2 ring-oliva' : 'opacity-60'}`}>
                   {a}
                 </button>
               ))}
             </div>
           )}
-        </Desplegable>
 
-        {/* Perfil nutricional: de aquí sale el objetivo diario que pinta Dietas. */}
-        <Desplegable
-          titulo={t('nut.titulo')}
-          resumen={resumenNutricion}
-          abierto={seccion === 'nutricion'}
-          onToggle={() => toggleSeccion('nutricion')}
-        >
-          <PerfilNutricional />
-        </Desplegable>
-
-        {/* Hogar */}
-        <Desplegable
-          titulo={t('aj.tuHogar')}
-          resumen={companeros.length ? t('aj.resCompaneros', { n: companeros.length + 1 }) : t('aj.resSolo')}
-          abierto={seccion === 'hogar'}
-          onToggle={() => toggleSeccion('hogar')}
-        >
-          <div className="tarjeta flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-oliva-oscuro/60">{t('aj.codigoInvitacion')}</p>
               <p className="select-all text-2xl font-bold tracking-widest text-oliva">{hogar?.codigo || '—'}</p>
@@ -189,6 +179,16 @@ export default function Ajustes({ abierto, onCerrar }) {
               <p className="max-w-[8rem] text-right text-xs text-oliva-oscuro/60">{t('aj.comparteCodigo')}</p>
             )}
           </div>
+        </div>
+
+        {/* Perfil nutricional: de aquí sale el objetivo diario que pinta Dietas. */}
+        <Desplegable
+          titulo={t('nut.titulo')}
+          resumen={resumenNutricion}
+          abierto={seccion === 'nutricion'}
+          onToggle={() => toggleSeccion('nutricion')}
+        >
+          <PerfilNutricional />
         </Desplegable>
 
         {/* Apariencia: tema + idioma, que siempre se tocan a la vez. */}
@@ -199,28 +199,28 @@ export default function Ajustes({ abierto, onCerrar }) {
           onToggle={() => toggleSeccion('apariencia')}
         >
           <p className="etiqueta">{t('aj.tema')}</p>
-          <div className="flex gap-2 rounded-2xl bg-crema-oscuro/60 p-1">
+          <div className="flex gap-4">
             <button
               onClick={() => setTheme('day')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-colors ${theme === 'day' ? 'bg-oliva text-crema-claro' : 'text-oliva-oscuro'}`}
+              className={`py-1 text-sm font-bold transition-colors ${theme === 'day' ? 'text-oliva underline underline-offset-4' : 'text-oliva-oscuro/50'}`}
             >
-              <IconoSol className="h-5 w-5" /> {t('aj.dia')}
+              {t('aj.dia')}
             </button>
             <button
               onClick={() => setTheme('night')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-colors ${theme === 'night' ? 'bg-oliva text-crema-claro' : 'text-oliva-oscuro'}`}
+              className={`py-1 text-sm font-bold transition-colors ${theme === 'night' ? 'text-oliva underline underline-offset-4' : 'text-oliva-oscuro/50'}`}
             >
-              <IconoLuna className="h-5 w-5" /> {t('aj.noche')}
+              {t('aj.noche')}
             </button>
           </div>
 
           <p className="etiqueta mt-3">{t('aj.idioma')}</p>
-          <div className="flex gap-2 rounded-2xl bg-crema-oscuro/60 p-1">
+          <div className="flex gap-4">
             {IDIOMAS.map((i) => (
               <button
                 key={i.id}
                 onClick={() => setIdioma(i.id)}
-                className={`flex flex-1 items-center justify-center rounded-xl py-2.5 text-sm font-bold transition-colors ${idioma === i.id ? 'bg-oliva text-crema-claro' : 'text-oliva-oscuro'}`}
+                className={`py-1 text-sm font-bold transition-colors ${idioma === i.id ? 'text-oliva underline underline-offset-4' : 'text-oliva-oscuro/50'}`}
               >
                 {i.label}
               </button>
@@ -228,118 +228,124 @@ export default function Ajustes({ abierto, onCerrar }) {
           </div>
         </Desplegable>
 
-        {/* Módulos: qué secciones uso y cuáles van en la barra de abajo.
-            Es una preferencia personal, no del hogar. */}
+        {/* Configuración agrupa lo que se toca de uvas a peras: qué secciones
+            uso y qué avisos quiero. Dentro va su propio acordeón. */}
         <Desplegable
-          titulo={t('aj.modulos')}
-          resumen={t('aj.resActivas', { n: modulos.activos.length, total: MODULOS.length })}
-          abierto={seccion === 'modulos'}
-          onToggle={() => toggleSeccion('modulos')}
+          titulo={t('aj.configuracion')}
+          resumen={`${t('aj.resActivas', { n: modulos.activos.length, total: MODULOS.length })} · ${t('aj.resNotis', { n: notisActivas, total: TIPOS.length })}`}
+          abierto={seccion === 'configuracion'}
+          onToggle={() => toggleSeccion('configuracion')}
         >
-          <p className="mb-2 text-xs text-oliva-oscuro/60">{t('aj.modulosDesc', { max: MAX_PRINCIPALES })}</p>
+          {/* Sangrado + guía a la izquierda para que se vea que cuelgan de
+              «Configuración». La última no lleva línea abajo: ya la pone ella. */}
+          <div className="border-l-2 border-contorno/15 pl-3 [&>section:last-child]:border-b-0">
+          {/* Módulos: qué secciones uso y cuáles van en la barra de abajo.
+              Es una preferencia personal, no del hogar. */}
+          <Desplegable
+            titulo={t('aj.modulos')}
+            resumen={t('aj.resActivas', { n: modulos.activos.length, total: MODULOS.length })}
+            abierto={subseccion === 'modulos'}
+            onToggle={() => toggleSubseccion('modulos')}
+          >
+            <p className="mb-2 text-xs text-oliva-oscuro/60">{t('aj.modulosDesc', { max: MAX_PRINCIPALES })}</p>
 
-          {/* Vista previa de la barra de abajo, en su orden real. Las flechas
-              mueven cada sección a izquierda o derecha. */}
-          <div className="mb-3 rounded-2xl bg-crema-oscuro/40 p-2">
-            <p className="mb-2 px-1 text-xs font-bold text-oliva-oscuro/70">{t('aj.ordenBarra')}</p>
-            <div className="flex gap-1.5">
-              {modulos.principales.map((id, i) => (
-                <div key={id} className="flex flex-1 flex-col items-center gap-1 rounded-xl2 border-2 border-contorno/20 bg-crema-claro py-2">
-                  <IconoModulo id={id} className="h-6 w-6 text-oliva-oscuro" />
-                  <span className="max-w-full truncate px-1 text-[10px] font-bold text-bosque">
-                    {t(MODULOS.find((m) => m.id === id).nav)}
-                  </span>
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => moverPrincipal(id, -1)}
-                      disabled={i === 0}
-                      aria-label={t('aj.moverIzq')}
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
-                    >
-                      <IconoFlecha dir="left" className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => moverPrincipal(id, 1)}
-                      disabled={i === modulos.principales.length - 1}
-                      aria-label={t('aj.moverDer')}
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
-                    >
-                      <IconoFlecha dir="right" className="h-4 w-4" />
-                    </button>
+            {/* Vista previa de la barra de abajo, en su orden real. Las flechas
+                mueven cada sección a izquierda o derecha. */}
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-bold text-oliva-oscuro/70">{t('aj.ordenBarra')}</p>
+              <div className="flex gap-1.5">
+                {modulos.principales.map((id, i) => (
+                  <div key={id} className="flex flex-1 flex-col items-center gap-1 py-1">
+                    <span className="max-w-full truncate px-1 text-[11px] font-bold text-bosque">
+                      {t(MODULOS.find((m) => m.id === id).nav)}
+                    </span>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => moverPrincipal(id, -1)}
+                        disabled={i === 0}
+                        aria-label={t('aj.moverIzq')}
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
+                      >
+                        <IconoFlecha dir="left" className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => moverPrincipal(id, 1)}
+                        disabled={i === modulos.principales.length - 1}
+                        aria-label={t('aj.moverDer')}
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-oliva-oscuro disabled:opacity-25"
+                      >
+                        <IconoFlecha dir="right" className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            {MODULOS.map((m) => {
-              const encendido = modulos.activos.includes(m.id)
-              const principal = modulos.principales.includes(m.id)
-              const barraLlena = modulos.principales.length >= MAX_PRINCIPALES
-              const estrellaBloqueada =
-                !encendido ||
-                (!principal && barraLlena) ||
-                (principal && modulos.principales.length === 1)
-              return (
-                <div key={m.id} className={`flex items-center justify-between rounded-2xl bg-crema-claro px-3 py-2.5 ${encendido ? '' : 'opacity-50'}`}>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-xl">{m.emoji}</span>
+            <div>
+              {MODULOS.map((m) => {
+                const encendido = modulos.activos.includes(m.id)
+                const principal = modulos.principales.includes(m.id)
+                const barraLlena = modulos.principales.length >= MAX_PRINCIPALES
+                const estrellaBloqueada =
+                  !encendido ||
+                  (!principal && barraLlena) ||
+                  (principal && modulos.principales.length === 1)
+                return (
+                  <div key={m.id} className={`flex items-center justify-between border-b border-contorno/10 py-2.5 last:border-0 ${encendido ? '' : 'opacity-50'}`}>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-bosque">{t(m.nav)}</p>
                       <p className="truncate text-xs text-oliva-oscuro/60">{t(m.desc)}</p>
                     </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => togglePrincipal(m.id)}
+                        disabled={estrellaBloqueada}
+                        aria-pressed={principal}
+                        aria-label={t('aj.enLaBarra')}
+                        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                          principal ? 'bg-dorado text-contorno' : 'text-oliva-oscuro/35'
+                        } ${estrellaBloqueada ? 'cursor-not-allowed opacity-60' : 'hover:bg-crema-oscuro'}`}
+                      >
+                        <IconoEstrella className="h-5 w-5" relleno={principal} />
+                      </button>
+                      <Toggle activo={encendido} onClick={() => toggleModulo(m.id)} />
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      onClick={() => togglePrincipal(m.id)}
-                      disabled={estrellaBloqueada}
-                      aria-pressed={principal}
-                      aria-label={t('aj.enLaBarra')}
-                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-                        principal ? 'bg-dorado text-contorno' : 'text-oliva-oscuro/35'
-                      } ${estrellaBloqueada ? 'cursor-not-allowed opacity-60' : 'hover:bg-crema-oscuro'}`}
-                    >
-                      <IconoEstrella className="h-5 w-5" relleno={principal} />
-                    </button>
-                    <Toggle activo={encendido} onClick={() => toggleModulo(m.id)} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Desplegable>
+                )
+              })}
+            </div>
+          </Desplegable>
 
-        {/* Notificaciones */}
-        <Desplegable
-          titulo={t('aj.notificaciones')}
-          resumen={t('aj.resNotis', { n: notisActivas, total: TIPOS.length })}
-          abierto={seccion === 'notificaciones'}
-          onToggle={() => toggleSeccion('notificaciones')}
-        >
-          {notificacionesSoportadas() && (
-            <button onClick={handleActivarPush} disabled={estadoPush === 'ok' || estadoPush === 'pidiendo'}
-              className="btn-secundario mb-3 w-full text-sm">
-              {estadoPush === 'ok' ? t('aj.pushOk') :
-               estadoPush === 'pidiendo' ? t('aj.pushActivando') :
-               estadoPush === 'error' ? t('aj.pushError') :
-               t('aj.pushActivar')}
-            </button>
-          )}
+          {/* Notificaciones */}
+          <Desplegable
+            titulo={t('aj.notificaciones')}
+            resumen={t('aj.resNotis', { n: notisActivas, total: TIPOS.length })}
+            abierto={subseccion === 'notificaciones'}
+            onToggle={() => toggleSubseccion('notificaciones')}
+          >
+            {notificacionesSoportadas() && (
+              <button onClick={handleActivarPush} disabled={estadoPush === 'ok' || estadoPush === 'pidiendo'}
+                className="btn-secundario mb-3 w-full text-sm">
+                {estadoPush === 'ok' ? t('aj.pushOk') :
+                 estadoPush === 'pidiendo' ? t('aj.pushActivando') :
+                 estadoPush === 'error' ? t('aj.pushError') :
+                 t('aj.pushActivar')}
+              </button>
+            )}
 
-          <div className="space-y-2">
-            {TIPOS.map((tipo) => (
-              <div key={tipo.clave} className="flex items-center justify-between rounded-2xl bg-crema-claro px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{tipo.emoji}</span>
+            <div>
+              {TIPOS.map((tipo) => (
+                <div key={tipo.clave} className="flex items-center justify-between border-b border-contorno/10 py-2.5 last:border-0">
                   <div>
                     <p className="text-sm font-bold text-bosque">{t(tipo.labelKey)}</p>
                     <p className="text-xs text-oliva-oscuro/60">{t(tipo.descKey)}</p>
                   </div>
+                  <Toggle activo={!!notis[tipo.clave]} onClick={() => toggleNoti(tipo.clave)} />
                 </div>
-                <Toggle activo={!!notis[tipo.clave]} onClick={() => toggleNoti(tipo.clave)} />
-              </div>
-            ))}
+              ))}
+            </div>
+          </Desplegable>
           </div>
         </Desplegable>
 
