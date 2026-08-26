@@ -209,63 +209,9 @@ function EditorReceta({ receta, alimentos, alimentosPorId, onCerrar, onGuardar }
           <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} className="input" maxLength={60} placeholder={t('dietas.recetaPlaceholder')} />
         </div>
 
-        <div>
-          <label className="etiqueta">{t('dietas.icono')}</label>
-          <div className="grid grid-cols-8 gap-1">
-            {ICONOS_RECETA.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => setEmoji(e)}
-                className={`flex h-9 items-center justify-center rounded-xl text-xl ${emoji === e ? 'bg-oliva' : 'bg-crema-claro'}`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Comidas para las que sirve: el menú filtra por esto al añadir un
-            plato. Sin ninguna marcada, la receta aparece en todas. */}
-        <div>
-          <label className="etiqueta">{t('dietas.paraQueComidas')}</label>
-          <div className="flex flex-wrap gap-1.5">
-            {COMIDAS.map((c) => {
-              const activo = bloques.includes(c)
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() =>
-                    setBloques(activo ? bloques.filter((x) => x !== c) : [...bloques, c])
-                  }
-                  className={`chip border-2 px-3 py-1.5 ${
-                    activo
-                      ? 'border-contorno bg-oliva text-crema-claro'
-                      : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
-                  }`}
-                >
-                  {EMOJI_COMIDA[c]} {t('dietas.comida.' + c)}
-                </button>
-              )
-            })}
-          </div>
-          {bloques.length === 0 && (
-            <p className="mt-1 text-xs text-oliva-oscuro/50">{t('dietas.sinBloquesNota')}</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <label className="block">
-            <span className="etiqueta">{t('dietas.raciones')}</span>
-            <input inputMode="numeric" value={raciones} onChange={(e) => setRaciones(e.target.value)} className="input" />
-          </label>
-          <label className="block">
-            <span className="etiqueta">{t('dietas.tiempoMin')}</span>
-            <input inputMode="numeric" value={tiempoMin} onChange={(e) => setTiempoMin(e.target.value)} className="input" placeholder="30" />
-          </label>
-        </div>
-
+        {/* Los ingredientes van justo detrás del nombre: son el grueso del
+            trabajo de crear una receta, y dejarlos a mitad de formulario
+            obligaba a scrollear para llegar a lo único que se hace siempre. */}
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <span className="etiqueta mb-0">{t('dietas.ingredientes')}</span>
@@ -313,6 +259,66 @@ function EditorReceta({ receta, alimentos, alimentosPorId, onCerrar, onGuardar }
               })}
             </p>
           )}
+        </div>
+
+        {/* Comidas para las que sirve: el menú filtra por esto al añadir un
+            plato. Sin ninguna marcada, la receta aparece en todas. */}
+        <div>
+          <label className="etiqueta">{t('dietas.paraQueComidas')}</label>
+          <div className="flex flex-wrap gap-1.5">
+            {COMIDAS.map((c) => {
+              const activo = bloques.includes(c)
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() =>
+                    setBloques(activo ? bloques.filter((x) => x !== c) : [...bloques, c])
+                  }
+                  className={`chip border-2 px-3 py-1.5 ${
+                    activo
+                      ? 'border-contorno bg-oliva text-crema-claro'
+                      : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
+                  }`}
+                >
+                  {EMOJI_COMIDA[c]} {t('dietas.comida.' + c)}
+                </button>
+              )
+            })}
+          </div>
+          {bloques.length === 0 && (
+            <p className="mt-1 text-xs text-oliva-oscuro/50">{t('dietas.sinBloquesNota')}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="etiqueta">{t('dietas.raciones')}</span>
+            <input inputMode="numeric" value={raciones} onChange={(e) => setRaciones(e.target.value)} className="input" />
+          </label>
+          <label className="block">
+            <span className="etiqueta">{t('dietas.tiempoMin')}</span>
+            <input inputMode="numeric" value={tiempoMin} onChange={(e) => setTiempoMin(e.target.value)} className="input" placeholder="30" />
+          </label>
+        </div>
+
+        {/* El icono va aquí abajo a propósito: es lo menos importante del
+            formulario y su rejilla ocupa mucho, así que estorbaba entre el
+            nombre y los campos que de verdad definen la receta. */}
+        <div>
+          <label className="etiqueta">{t('dietas.icono')}</label>
+          <div className="grid grid-cols-8 gap-1">
+            {ICONOS_RECETA.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEmoji(e)}
+                className={`flex h-9 items-center justify-center rounded-xl text-xl ${emoji === e ? 'bg-oliva' : 'bg-crema-claro'}`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
