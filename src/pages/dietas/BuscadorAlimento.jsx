@@ -169,7 +169,12 @@ export default function BuscadorAlimento({
 
   // ── Paso 1: buscar ──
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} titulo={titulo || t('dietas.buscarAlimento')}>
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo={titulo || t('dietas.buscarAlimento')}
+      alto={manual ? undefined : 'fijo'}
+    >
       {manual ? (
         <FormAlimentoManual
           nombreInicial={q}
@@ -181,80 +186,89 @@ export default function BuscadorAlimento({
           guardando={guardando}
         />
       ) : (
-        <div className="space-y-3">
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setResultadosOff(null); setErrorOff('') }}
-            placeholder={t('dietas.buscarPlaceholder')}
-            className="input"
-          />
+        <>
+          {/* Cabecera fija: el buscador y las dos salidas (OFF / a mano) se
+              quedan siempre arriba, por encima del teclado del móvil, pase lo
+              que pase con el número de resultados. */}
+          <div className="shrink-0 space-y-2">
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setResultadosOff(null); setErrorOff('') }}
+              placeholder={t('dietas.buscarPlaceholder')}
+              className="input"
+            />
 
-          {/* Catálogo del hogar: instantáneo y sin API */}
-          {locales.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold text-oliva-oscuro/60">{t('dietas.deTuDespensa')}</p>
-              {locales.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => elegirLocal(a)}
-                  className="flex w-full items-center gap-2 rounded-2xl bg-crema-claro px-3 py-2.5 text-left shadow-suave"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-bosque">{a.nombre}</p>
-                    <p className="truncate text-xs text-oliva-oscuro/60">
-                      {a.marca ? `${a.marca} · ` : ''}{Math.round(a.por100?.kcal || 0)} kcal/100{a.unidad === 'ml' ? 'ml' : 'g'}
-                    </p>
-                  </div>
-                </button>
-              ))}
+            {/* Open Food Facts: solo bajo petición explícita */}
+            <div className="flex gap-2">
+              <button
+                onClick={buscarOff}
+                disabled={q.trim().length < 2 || buscandoOff}
+                className="btn-secundario flex-1 py-2 text-sm"
+              >
+                {buscandoOff ? t('dietas.buscandoOff') : t('dietas.buscarEnOff')}
+              </button>
+              <button onClick={() => setManual(true)} className="btn-fantasma py-2 text-sm">
+                {t('dietas.crearAMano')}
+              </button>
             </div>
-          )}
 
-          {locales.length === 0 && q.trim() && (
-            <p className="text-sm text-oliva-oscuro/70">{t('dietas.noEstaEnDespensa')}</p>
-          )}
-
-          {/* Open Food Facts: solo bajo petición explícita */}
-          <div className="flex gap-2">
-            <button
-              onClick={buscarOff}
-              disabled={q.trim().length < 2 || buscandoOff}
-              className="btn-secundario flex-1 py-2.5 text-sm"
-            >
-              {buscandoOff ? t('dietas.buscandoOff') : t('dietas.buscarEnOff')}
-            </button>
-            <button onClick={() => setManual(true)} className="btn-fantasma py-2.5 text-sm">
-              {t('dietas.crearAMano')}
-            </button>
+            {errorOff && <p className="text-sm text-marron">{errorOff}</p>}
           </div>
 
-          {errorOff && <p className="text-sm text-marron">{errorOff}</p>}
+          {/* Única zona que scrollea: la lista. Los márgenes negativos son para
+              que las tarjetas lleguen al borde del modal al desplazarse. */}
+          <div className="-mx-5 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto border-t border-contorno/15 px-5 pt-3">
+            {/* Catálogo del hogar: instantáneo y sin API */}
+            {locales.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-oliva-oscuro/60">{t('dietas.deTuDespensa')}</p>
+                {locales.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => elegirLocal(a)}
+                    className="flex w-full items-center gap-2 rounded-2xl bg-crema-claro px-3 py-2.5 text-left shadow-suave"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold text-bosque">{a.nombre}</p>
+                      <p className="truncate text-xs text-oliva-oscuro/60">
+                        {a.marca ? `${a.marca} · ` : ''}{Math.round(a.por100?.kcal || 0)} kcal/100{a.unidad === 'ml' ? 'ml' : 'g'}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {resultadosOff?.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold text-oliva-oscuro/60">{t('dietas.resultadosOff')}</p>
-              {resultadosOff.map((a, i) => (
-                <button
-                  key={a.offId || i}
-                  onClick={() => guardarYElegir(a)}
-                  disabled={guardando}
-                  className="flex w-full items-center gap-2 rounded-2xl bg-salvia-claro/40 px-3 py-2.5 text-left"
-                >
-                  {a.imagen && <img src={a.imagen} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-bosque">{a.nombre}</p>
-                    <p className="truncate text-xs text-oliva-oscuro/60">
-                      {a.marca ? `${a.marca} · ` : ''}{Math.round(a.por100.kcal)} kcal/100{a.unidad === 'ml' ? 'ml' : 'g'}
-                      {a.envase ? ` · ${a.envase}` : ''}
-                    </p>
-                  </div>
-                </button>
-              ))}
-              <p className="pt-1 text-xs text-oliva-oscuro/50">{t('dietas.offSeGuarda')}</p>
-            </div>
-          )}
-        </div>
+            {locales.length === 0 && q.trim() && (
+              <p className="text-sm text-oliva-oscuro/70">{t('dietas.noEstaEnDespensa')}</p>
+            )}
+
+            {resultadosOff?.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-oliva-oscuro/60">{t('dietas.resultadosOff')}</p>
+                {resultadosOff.map((a, i) => (
+                  <button
+                    key={a.offId || i}
+                    onClick={() => guardarYElegir(a)}
+                    disabled={guardando}
+                    className="flex w-full items-center gap-2 rounded-2xl bg-salvia-claro/40 px-3 py-2.5 text-left"
+                  >
+                    {a.imagen && <img src={a.imagen} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold text-bosque">{a.nombre}</p>
+                      <p className="truncate text-xs text-oliva-oscuro/60">
+                        {a.marca ? `${a.marca} · ` : ''}{Math.round(a.por100.kcal)} kcal/100{a.unidad === 'ml' ? 'ml' : 'g'}
+                        {a.envase ? ` · ${a.envase}` : ''}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+                <p className="pt-1 text-xs text-oliva-oscuro/50">{t('dietas.offSeGuarda')}</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </Modal>
   )

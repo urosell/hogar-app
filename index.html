@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <!-- interactive-widget=resizes-content: al abrirse el teclado el viewport se
+         encoge de verdad, en vez de quedarse igual con el teclado tapando la parte
+         de abajo. Así las unidades dvh y los elementos anclados abajo (BottomNav,
+         hojas modales) respetan el espacio libre real. Android/Chrome lo aplica;
+         iOS lo ignora y sigue con su propio comportamiento. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#1E2718" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

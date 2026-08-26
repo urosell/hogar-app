@@ -30,21 +30,32 @@ export function Avatar({ icono, nombre, size = 'md', activo = false }) {
   )
 }
 
-export function Modal({ abierto, onCerrar, titulo, children }) {
+// `alto="fijo"` reserva siempre el mismo alto en vez de ajustarse al contenido,
+// y deja que sea el hijo quien scrollee. Es para los modales cuyo contenido
+// encoge mientras se escribe (un buscador que va filtrando): al ser una hoja
+// anclada abajo, encogerse arrastra los controles hacia el borde inferior, que
+// en móvil es justo donde está el teclado. Con alto fijo, lo que se pone arriba
+// se queda arriba.
+export function Modal({ abierto, onCerrar, titulo, children, alto }) {
   if (!abierto) return null
+  const fijo = alto === 'fijo'
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
       onClick={onCerrar}
     >
       <div
-        className="fade-in max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-crema-claro p-5 shadow-tarjeta sm:rounded-3xl"
+        className={`fade-in w-full max-w-md rounded-t-3xl bg-crema-claro p-5 shadow-tarjeta sm:rounded-3xl ${
+          fijo
+            ? 'flex h-[80dvh] flex-col overflow-hidden sm:h-[min(80dvh,36rem)]'
+            : 'max-h-[90vh] overflow-y-auto'
+        }`}
         style={{ paddingBottom: 'calc(1.25rem + var(--safe-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-crema-oscuro sm:hidden" />
-        {titulo && <h2 className="mb-4 text-xl font-bold text-bosque">{titulo}</h2>}
-        {children}
+        <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-crema-oscuro sm:hidden" />
+        {titulo && <h2 className="mb-4 shrink-0 text-xl font-bold text-bosque">{titulo}</h2>}
+        {fijo ? <div className="flex min-h-0 flex-1 flex-col">{children}</div> : children}
       </div>
     </div>
   )
