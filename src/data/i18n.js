@@ -231,6 +231,10 @@ const ES = {
   'tareas.filtroActivas': 'Activas',
   'tareas.filtroAprobar': 'Por aprobar',
   'tareas.completarPts': 'Completar · +{n} pts',
+  'tareas.proximoEvento': 'Próximo evento',
+  'tareas.eventoHoy': 'hoy',
+  'tareas.eventoManana': 'mañana',
+  'tareas.eventoEnDias': 'en {n} días',
 
   // Notificaciones (las genera el dispositivo emisor, en su idioma)
   'notif.tareaHechaTitulo': '✅ Tarea completada',
@@ -828,6 +832,10 @@ const CA = {
   'tareas.filtroActivas': 'Actives',
   'tareas.filtroAprobar': 'Per aprovar',
   'tareas.completarPts': 'Completar · +{n} pts',
+  'tareas.proximoEvento': 'Proper esdeveniment',
+  'tareas.eventoHoy': 'avui',
+  'tareas.eventoManana': 'demà',
+  'tareas.eventoEnDias': "d'aquí {n} dies",
 
   // Notificaciones
   'notif.tareaHechaTitulo': '✅ Tasca completada',

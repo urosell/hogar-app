@@ -280,7 +280,14 @@ export default function Calendario() {
                     <Dot key={c} color={c === COLOR_PAREJA ? '#FFFFFF' : c} />
                   ))}
                   {info?.proyectos.length > 0 && <Dot color={COLOR_PROYECTO} />}
-                  {info?.gym?.length > 0 && <Dot color={COLOR_GYM} />}
+                  {/* Gym: un cuadradito por persona que fue, con su color */}
+                  {(info?.gym || []).map((id) => (
+                    <span
+                      key={`g-${id}`}
+                      className="h-1.5 w-1.5 rounded-[2px]"
+                      style={{ backgroundColor: COLORES_PERSONA[ordenUids.indexOf(id)] ?? COLOR_GYM }}
+                    />
+                  ))}
                 </span>
               </button>
             )
@@ -293,7 +300,11 @@ export default function Calendario() {
           ))}
           <Leyenda color="#FFFFFF" texto={t('cal.pareja')} />
           <Leyenda color={COLOR_PROYECTO} texto={t('cal.leyendaProyecto')} />
-          <Leyenda color={COLOR_GYM} texto={t('cal.leyendaGym')} />
+          {/* Gym: cuadradito del color de cada persona */}
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-[2px] bg-white/80" />
+            {t('cal.leyendaGym')}
+          </span>
         </div>
       </div>
 

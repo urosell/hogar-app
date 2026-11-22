@@ -10,6 +10,8 @@ import {
   asignarTarea,
   actualizarTarea,
   reactivarTarea,
+  escucharEventosRango,
+  escucharEventosAnuales,
 } from '../firebase/firebaseService'
 import { enviarPushHogar } from '../firebase/push'
 import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
@@ -33,8 +35,46 @@ function textoQuedan(t, n) {
   return n === 1 ? t('tareas.quedaUnDia') : t('tareas.quedanDias', { n })
 }
 
+// Próximo evento del calendario (hoy en adelante, 90 días vista) para la
+// cabecera. Incluye aniversarios (se proyectan a su próxima fecha). Solo
+// escucha si el módulo Calendario está activo.
+function useProximoEvento(hogarId, activo) {
+  const [eventos, setEventos] = useState([])
+  const [anuales, setAnuales] = useState([])
+  const inicioHoy = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
+
+  useEffect(() => {
+    if (!hogarId || !activo) { setEventos([]); return }
+    const hasta = new Date(inicioHoy.getTime() + 90 * DIA)
+    return escucharEventosRango(hogarId, inicioHoy, hasta, setEventos)
+  }, [hogarId, activo, inicioHoy])
+
+  useEffect(() => {
+    if (!hogarId || !activo) { setAnuales([]); return }
+    return escucharEventosAnuales(hogarId, setAnuales)
+  }, [hogarId, activo])
+
+  return useMemo(() => {
+    const candidatos = []
+    for (const e of eventos) {
+      if (!e.fecha || e.anual) continue
+      candidatos.push({ titulo: e.titulo, fecha: e.fecha.toDate(), tieneHora: !!e.tieneHora })
+    }
+    for (const e of anuales) {
+      if (!e.fecha) continue
+      const orig = e.fecha.toDate()
+      let f = new Date(inicioHoy.getFullYear(), orig.getMonth(), orig.getDate())
+      if (f < inicioHoy) f = new Date(inicioHoy.getFullYear() + 1, orig.getMonth(), orig.getDate())
+      candidatos.push({ titulo: e.titulo, fecha: f, tieneHora: false, anual: true })
+    }
+    candidatos.sort((a, b) => a.fecha - b.fecha)
+    return candidatos[0] || null
+  }, [eventos, anuales, inicioHoy])
+}
+
 export default function Tareas({ seccion, setSeccion, onPendientes }) {
-  const { hogarId, uid, usuario, miembros, companeros } = useApp()
+  const { hogarId, uid, usuario, miembros, companeros, modulos } = useApp()
+  const proximoEvento = useProximoEvento(hogarId, modulos.activos.includes('calendario'))
   const { t } = useIdioma()
   const [tareas, setTareas] = useState([])
   const [cargado, setCargado] = useState(false)
@@ -139,7 +179,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
 
   return (
     <div className="space-y-5">
-      <CabeceraTareas nombre={usuario?.nombre} pendientesHoy={paraHacer.length} yo={porUid[uid]} />
+      <CabeceraTareas nombre={usuario?.nombre} pendientesHoy={paraHacer.length} yo={porUid[uid]} proximo={proximoEvento} />
 
       <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
 
@@ -385,8 +425,22 @@ const COLORES_MIEMBRO = [
 
 // Cabecera petróleo con saludo y resumen del día (estilo ilustrado plano).
 // Colores fijos: es la misma pieza oscura en el tema de día y en el de noche.
-function CabeceraTareas({ nombre, pendientesHoy, yo }) {
-  const { t } = useIdioma()
+function CabeceraTareas({ nombre, pendientesHoy, yo, proximo }) {
+  const { t, idioma } = useIdioma()
+  // "jueves 26 · en 4 días" / "hoy · 18:30" / "mañana"
+  let cuandoProximo = ''
+  if (proximo) {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+    const dia = new Date(proximo.fecha); dia.setHours(0, 0, 0, 0)
+    const n = Math.round((dia - hoy) / DIA)
+    const hora = proximo.tieneHora
+      ? ` · ${proximo.fecha.toLocaleTimeString(idioma === 'ca' ? 'ca-ES' : 'es-ES', { hour: '2-digit', minute: '2-digit' })}`
+      : ''
+    cuandoProximo =
+      n <= 0 ? t('tareas.eventoHoy') + hora
+        : n === 1 ? t('tareas.eventoManana') + hora
+          : `${DIAS_SEMANA_LARGO[idioma][proximo.fecha.getDay()]} ${proximo.fecha.getDate()} · ${t('tareas.eventoEnDias', { n })}`
+  }
   const nivel = yo ? nivelDesdePuntos(yo.puntos || 0) : null
   const resumen =
     pendientesHoy === 0
@@ -397,7 +451,7 @@ function CabeceraTareas({ nombre, pendientesHoy, yo }) {
   return (
     // -mx-4 anula el margen lateral del <main>: va a todo el ancho, pegada a la
     // barra de título (que en Tareas también es petróleo), redondeada solo abajo.
-    <div className="relative -mx-4 overflow-hidden rounded-b-[32px] px-5 pb-7 pt-2 text-white" style={{ background: '#1D4E5B' }}>
+    <div className="relative -mx-4 flex min-h-[8.5rem] flex-col justify-center overflow-hidden rounded-b-[32px] px-5 pb-6 pt-3 text-white" style={{ background: '#1D4E5B' }}>
       <svg
         className="pointer-events-none absolute -right-6 top-0"
         width="150"
@@ -408,7 +462,7 @@ function CabeceraTareas({ nombre, pendientesHoy, yo }) {
         <rect x="40" y="6" width="120" height="10" rx="5" fill="#2E6575" />
         <rect x="20" y="26" width="140" height="10" rx="5" fill="#2E6575" />
         <rect x="55" y="46" width="110" height="10" rx="5" fill="#2E6575" />
-        <circle cx="42" cy="88" r="15" fill="#F2C14E" />
+        <circle cx="42" cy="74" r="13" fill="#F2C14E" />
       </svg>
       <div className="relative max-w-[15rem] space-y-1.5">
         <p className="text-2xl font-bold leading-tight">{t('tareas.hola', { nombre: nombre || '' })}</p>
@@ -417,6 +471,28 @@ function CabeceraTareas({ nombre, pendientesHoy, yo }) {
           {nivel?.siguiente && ` ${t('tareas.faltanPts', { n: nivel.faltan, nivel: t('nivel.' + nivel.siguiente.nombre) })}.`}
         </p>
       </div>
+
+      {/* Próximo evento del calendario */}
+      {proximo && (
+        <div className="relative mt-4 flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.12)' }}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg" style={{ background: '#F2C14E', color: '#17323A' }}>
+            {proximo.anual ? '🎂' : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#F2C14E' }}>
+              {t('tareas.proximoEvento')}
+            </span>
+            <span className="block truncate text-sm font-semibold">{proximo.titulo}</span>
+          </span>
+          <span className="shrink-0 text-right text-xs leading-snug first-letter:uppercase" style={{ color: '#D5E3E7' }}>
+            {cuandoProximo}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
