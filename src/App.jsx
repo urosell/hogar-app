@@ -23,7 +23,7 @@ import Dietas from './pages/Dietas'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
-const CABECERA_OSCURA = new Set(['tareas', 'gym'])
+const CABECERA_OSCURA = new Set(['tareas', 'gym', 'calendario'])
 const COLOR_CABECERA = '#1D4E5B' // el mismo que CabeceraTareas (Tareas.jsx)
 
 export default function App() {
@@ -42,7 +42,7 @@ export default function App() {
 
   // Pestañas con cabecera petróleo (rediseño "ilustrado plano"): la barra de
   // título se pinta del mismo color que la cabecera de la página, que va
-  // pegada debajo a todo el ancho. Se irán añadiendo gym y calendario.
+  // pegada debajo a todo el ancho.
   const oscura = CABECERA_OSCURA.has(tab)
   const btnIcono = oscura ? 'text-white/85 hover:bg-white/10' : 'text-oliva-oscuro hover:bg-crema-oscuro'
 

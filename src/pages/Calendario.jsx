@@ -229,28 +229,36 @@ export default function Calendario() {
   return (
     // En el PC el mes y la agenda del día van uno al lado del otro.
     <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-6 lg:space-y-0">
-      <div className="space-y-4">
-      {/* Cabecera de mes */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => cambiarMes(-1)} className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro" aria-label={t('cal.mesAnteriorAria')}>
-          <IconoFlecha dir="left" />
-        </button>
-        <button onClick={irHoy} className="text-lg font-bold capitalize text-bosque" aria-label={t('cal.irHoyAria')}>
-          {MESES_LARGO[idioma]?.[mes]} {anio}
-        </button>
-        <button onClick={() => cambiarMes(1)} className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro" aria-label={t('cal.mesSiguienteAria')}>
-          <IconoFlecha dir="right" />
-        </button>
-      </div>
+      {/* Cabecera petróleo a todo el ancho con el mes dentro (en el PC, tarjeta
+          redondeada en su columna). Colores fijos: igual de día y de noche. */}
+      <div
+        className="relative -mx-4 overflow-hidden rounded-b-[32px] px-3 pb-4 pt-1 text-white lg:mx-0 lg:rounded-[32px] lg:pt-4"
+        style={{ background: '#1D4E5B' }}
+      >
+        <svg className="pointer-events-none absolute -right-3 top-1" width="120" height="90" viewBox="0 0 120 90" aria-hidden="true">
+          <rect x="34" y="12" width="100" height="9" rx="4.5" fill="#2E6575" />
+          <rect x="14" y="30" width="110" height="9" rx="4.5" fill="#2E6575" />
+          <circle cx="20" cy="70" r="11" fill="#F2C14E" />
+        </svg>
+        <div className="relative flex items-center justify-between">
+          <button onClick={() => cambiarMes(-1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 hover:bg-white/20" aria-label={t('cal.mesAnteriorAria')}>
+            <IconoFlecha dir="left" />
+          </button>
+          <button onClick={irHoy} className="flex flex-col items-center leading-tight" aria-label={t('cal.irHoyAria')}>
+            <span className="text-2xl font-bold capitalize">{MESES_LARGO[idioma]?.[mes]}</span>
+            <span className="text-xs" style={{ color: '#D5E3E7' }}>{anio}</span>
+          </button>
+          <button onClick={() => cambiarMes(1)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 hover:bg-white/20" aria-label={t('cal.mesSiguienteAria')}>
+            <IconoFlecha dir="right" />
+          </button>
+        </div>
 
-      {/* Rejilla mensual */}
-      <div className="tarjeta">
-        <div className="mb-1 grid grid-cols-7">
+        <div className="relative mt-3 grid grid-cols-7">
           {DIAS_SEMANA[idioma].map((d, i) => (
-            <div key={i} className="py-1 text-center text-xs font-bold text-oliva-oscuro/50">{d}</div>
+            <div key={i} className="py-1 text-center text-xs font-semibold" style={{ color: '#A9C3CA' }}>{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-y-1">
+        <div className="relative grid grid-cols-7 gap-y-0.5">
           {celdas.map((dia, i) => {
             if (dia == null) return <div key={i} />
             const k = claveFecha(new Date(anio, mes, dia))
@@ -258,15 +266,18 @@ export default function Calendario() {
             const esHoy = k === hoyClave
             const sel = k === seleccion
             return (
-              <button key={i} onClick={() => setSeleccion(k)} className="flex flex-col items-center justify-start py-0.5">
-                <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors ${
-                  sel ? 'bg-oliva text-crema-claro' : esHoy ? 'text-oliva ring-2 ring-oliva' : 'text-bosque'
-                }`}>
+              <button key={i} onClick={() => setSeleccion(k)} aria-pressed={sel} className="flex flex-col items-center justify-start py-0.5">
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm transition-colors ${
+                    sel ? 'font-bold' : esHoy ? 'font-bold ring-2 ring-white/70' : 'font-medium'
+                  }`}
+                  style={sel ? { background: '#F2C14E', color: '#17323A' } : undefined}
+                >
                   {dia}
                 </span>
                 <span className="mt-0.5 flex h-1.5 items-center justify-center gap-0.5">
                   {[...new Set((info?.eventos || []).map((e) => colorEvento(e.quien, ordenUids)))].map((c) => (
-                    <Dot key={c} color={c} />
+                    <Dot key={c} color={c === COLOR_PAREJA ? '#FFFFFF' : c} />
                   ))}
                   {info?.proyectos.length > 0 && <Dot color={COLOR_PROYECTO} />}
                   {info?.gym?.length > 0 && <Dot color={COLOR_GYM} />}
@@ -276,21 +287,19 @@ export default function Calendario() {
           })}
         </div>
         {/* Leyenda */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-crema-oscuro/60 pt-2.5 text-xs text-oliva-oscuro/70">
+        <div className="relative mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs" style={{ color: '#D5E3E7' }}>
           {ordenUids.map((id, i) => (
             <Leyenda key={id} color={COLORES_PERSONA[i] ?? COLOR_PAREJA} texto={porUid[id]?.nombre || '—'} />
           ))}
-          <Leyenda color={COLOR_PAREJA} texto={t('cal.pareja')} />
+          <Leyenda color="#FFFFFF" texto={t('cal.pareja')} />
           <Leyenda color={COLOR_PROYECTO} texto={t('cal.leyendaProyecto')} />
           <Leyenda color={COLOR_GYM} texto={t('cal.leyendaGym')} />
         </div>
       </div>
 
-      </div>
-
-      {/* Agenda del día seleccionado */}
-      <div className="space-y-2.5 lg:pt-1.5">
-        <h3 className="text-sm font-bold capitalize text-oliva-oscuro">{tituloDiaSel}</h3>
+      {/* Agenda del día seleccionado: filas con baldosa de color */}
+      <div className="space-y-3.5 lg:pt-1.5">
+        <h2 className="text-lg capitalize text-bosque">{tituloDiaSel}</h2>
         {!haySel ? (
           <Vacio emoji="📅" titulo={t('cal.sinEventosDia')} />
         ) : (
@@ -298,48 +307,50 @@ export default function Calendario() {
             {diaSel.eventos.map((e) => {
               const color = colorEvento(e.quien, ordenUids)
               return (
-                <button key={e.id} onClick={() => setDetalle(e)} className="tarjeta flex w-full items-start gap-3 text-left transition-transform active:scale-[0.99]">
-                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 font-bold text-bosque">
-                      {e.anual && <span>🎂</span>}
-                      {e.titulo}
-                    </p>
-                    <p className="text-xs font-bold" style={{ color }}>
+                <button key={e.id} onClick={() => setDetalle(e)} className="flex w-full items-center gap-3.5 text-left transition-transform active:scale-[0.99]">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ backgroundColor: `${color}2E` }}>
+                    {e.anual ? '🎂' : (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    {(e.tieneHora && !esMultiDia(e) && !e.anual) && (
+                      <span className="block text-xs font-bold text-oliva">{fmtHora(e.fecha)}</span>
+                    )}
+                    <span className="block truncate font-semibold text-bosque">{e.titulo}</span>
+                    <span className="block truncate text-xs text-oliva-oscuro">
                       {nombreQuien(e.quien)}
-                      {e.anual
-                        ? ` · ${t('cal.aniversario')}`
-                        : esMultiDia(e)
-                        ? ` · ${fmtRango(e.fecha, e.fechaFin, idioma)}`
-                        : e.tieneHora
-                        ? ` · ${fmtHora(e.fecha)}`
-                        : ''}
-                    </p>
-                    {e.notas && <p className="mt-0.5 truncate text-sm text-oliva-oscuro/70">{e.notas}</p>}
-                  </div>
+                      {e.anual ? ` · ${t('cal.aniversario')}` : esMultiDia(e) ? ` · ${fmtRango(e.fecha, e.fechaFin, idioma)}` : ''}
+                      {e.notas ? ` · ${e.notas}` : ''}
+                    </span>
+                  </span>
                 </button>
               )
             })}
             {diaSel.proyectos.map((p) => (
-              <div key={p.id} className="tarjeta flex items-center gap-3">
-                <span className="text-2xl">{p.proyectoIcono || '📦'}</span>
-                <div className="min-w-0 flex-1">
-                  <p className={`font-bold text-bosque ${p.hecho ? 'line-through opacity-60' : ''}`}>{p.nombre}</p>
-                  <p className="text-xs font-bold" style={{ color: COLOR_PROYECTO }}>{t('cal.origenProyecto', { nombre: p.proyecto })}</p>
-                </div>
+              <div key={p.id} className="flex items-center gap-3.5">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ backgroundColor: '#F6E3D6' }}>
+                  {p.proyectoIcono || '📦'}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate font-semibold text-bosque ${p.hecho ? 'line-through opacity-60' : ''}`}>{p.nombre}</span>
+                  <span className="block truncate text-xs text-oliva-oscuro">{t('cal.origenProyecto', { nombre: p.proyecto })}</span>
+                </span>
               </div>
             ))}
             {diaSel.gym?.length > 0 && (
-              <div className="tarjeta flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: COLOR_GYM, color: '#fff' }}>
-                  <IconoGym className="h-5 w-5" />
+              <div className="flex items-center gap-3.5">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ backgroundColor: COLOR_GYM, color: '#17323A' }}>
+                  <IconoGym className="h-6 w-6" />
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-bosque">{t('cal.fueronGym')}</p>
-                  <p className="text-xs text-oliva-oscuro/70">
-                    {diaSel.gym.map((id) => `${porUid[id]?.icono || '🙂'} ${porUid[id]?.nombre || '—'}`).join('  ·  ')}
-                  </p>
-                </div>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-bosque">{t('cal.fueronGym')}</span>
+                  <span className="block truncate text-xs text-oliva-oscuro">
+                    {diaSel.gym.map((id) => porUid[id]?.nombre || '—').join(' · ')}
+                  </span>
+                </span>
               </div>
             )}
           </>
@@ -349,7 +360,7 @@ export default function Calendario() {
       {/* Botón flotante: nuevo evento */}
       <button
         onClick={() => setModalEvento(true)}
-        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-dorado text-contorno shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('cal.nuevoEventoAria')}
       >
