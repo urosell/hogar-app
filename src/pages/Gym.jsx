@@ -168,24 +168,32 @@ export default function Gym() {
           {miembros.map((m) => {
             const activo = asistentesHoy.includes(m.id)
             return (
+              // Toda la tarjeta es el botón: tocarla marca/desmarca. Marcada se
+              // pinta en mostaza con un check; sin marcar, blanca con un círculo vacío.
               <button
                 key={m.id}
                 onClick={() => toggle(m.id)}
                 aria-pressed={activo}
-                className="flex cursor-pointer flex-col gap-2.5 rounded-2xl bg-white p-3 text-left transition-transform active:scale-[0.97]"
-                style={{ color: '#17323A' }}
+                className="flex min-h-[3.5rem] cursor-pointer items-center gap-2 rounded-2xl p-2.5 text-left transition-all active:scale-[0.97]"
+                style={{ color: '#17323A', background: activo ? '#F2C14E' : '#FFFFFF' }}
               >
-                <span className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl text-xl" style={{ background: colorDe[m.id] + '33' }}>
-                    {m.icono}
-                  </span>
-                  <span className="truncate text-sm font-semibold">{m.nombre}</span>
-                </span>
                 <span
-                  className="flex h-10 items-center justify-center rounded-xl text-sm font-bold"
-                  style={activo ? { background: '#DCE8EC', color: '#1D4E5B' } : { background: '#F2C14E', color: '#17323A' }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xl"
+                  style={{ background: activo ? 'rgba(255,255,255,0.55)' : colorDe[m.id] + '33' }}
                 >
-                  {activo ? t('gym.hecho') : t('gym.marcar')}
+                  {m.icono}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.nombre}</span>
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                  style={activo ? { background: '#17323A' } : { border: '2px solid #CFC7B8' }}
+                  aria-hidden="true"
+                >
+                  {activo && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2C14E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12l5 5L19 7" />
+                    </svg>
+                  )}
                 </span>
               </button>
             )
