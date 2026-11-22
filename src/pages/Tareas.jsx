@@ -18,6 +18,9 @@ import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
 import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
 import IlustracionTarea from '../components/IlustracionTarea'
+import useProyectosConItems from '../hooks/useProyectosConItems'
+import { pasosParaMi } from '../data/proyectos'
+import { cambiarEstadoItemProyecto } from '../firebase/firebaseService'
 import { useIdioma } from '../context/IdiomaContext'
 
 const DIA = 24 * 60 * 60 * 1000
@@ -182,6 +185,8 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       <CabeceraTareas nombre={usuario?.nombre} pendientesHoy={paraHacer.length} yo={porUid[uid]} proximo={proximoEvento} />
 
       <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
+
+      {modulos.activos.includes('proyectos') && <PasosProyectos hogarId={hogarId} uid={uid} />}
 
       {/* Filtro Activas / Por aprobar (la campana de arriba sigue funcionando) */}
       <div className="flex gap-2">
@@ -411,6 +416,67 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
         </div>
       </Modal>
     </div>
+  )
+}
+
+// "Siguiente en tus proyectos": los pasos que te tocan (el siguiente de cada
+// proyecto activo y lo que tiene "cuándo" esta semana), para que lo apuntado
+// en Proyectos aparezca donde miráis cada día. Máximo 3.
+function PasosProyectos({ hogarId, uid }) {
+  const { t, idioma } = useIdioma()
+  const { proyectos, itemsPorProyecto } = useProyectosConItems(hogarId)
+  const [haciendo, setHaciendo] = useState(null)
+  const pasos = useMemo(() => pasosParaMi(proyectos, itemsPorProyecto, uid).slice(0, 3), [proyectos, itemsPorProyecto, uid])
+  if (!pasos.length) return null
+
+  function cuando(ms) {
+    if (ms == null) return null
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+    const d = new Date(ms); d.setHours(0, 0, 0, 0)
+    const n = Math.round((d - hoy) / DIA)
+    if (n < 0) return { texto: t('pr.atrasado'), color: '#9A4D32' }
+    if (n === 0) return { texto: t('pr.hoy'), color: '#8A6510' }
+    if (n === 1) return { texto: t('pr.manana'), color: null }
+    return { texto: DIAS_SEMANA_LARGO[idioma][d.getDay()], color: null }
+  }
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg text-bosque">{t('pr.siguienteEnProyectos')}</h2>
+      <div className="space-y-2">
+        {pasos.map(({ proyecto, item, cuando: ms }) => {
+          const c = cuando(ms)
+          const saliendo = haciendo === item.id
+          return (
+            <div key={item.id} className={`tarjeta flex items-center gap-3 py-3 ${saliendo ? 'salida-completado' : ''}`}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: '#FBEFC8' }}>
+                {proyecto.icono || '📦'}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-bosque">{item.nombre}</p>
+                <p className="truncate text-xs text-oliva-oscuro">
+                  {proyecto.nombre}
+                  {c && <span className="font-semibold" style={c.color ? { color: c.color } : undefined}> · {c.texto}</span>}
+                  {Number(item.puntos) > 0 && !item.puntosDados && <span> · +{item.puntos} pts</span>}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setHaciendo(item.id)
+                  setTimeout(() => cambiarEstadoItemProyecto(hogarId, proyecto, item, 'hecho', uid).finally(() => setHaciendo(null)), 350)
+                }}
+                disabled={saliendo}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white"
+                style={{ background: '#1D4E5B' }}
+                aria-label={`${t('pr.marcarHecho')}: ${item.nombre}`}
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 

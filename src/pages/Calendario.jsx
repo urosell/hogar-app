@@ -6,11 +6,10 @@ import {
   crearEvento,
   actualizarEvento,
   eliminarEvento,
-  escucharProyectos,
-  escucharItemsProyecto,
   escucharGymRango,
   claveFecha,
 } from '../firebase/firebaseService'
+import useProyectosConItems from '../hooks/useProyectosConItems'
 import { MESES_LARGO, MESES_CORTO, DIAS_SEMANA } from '../data/i18n'
 import { Modal, Vacio, IconoMas, IconoFlecha, IconoGym } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
@@ -59,40 +58,18 @@ function fmtRango(inicioTs, finTs, idioma) {
   return `${i.getDate()} ${meses[i.getMonth()]} – ${f.getDate()} ${meses[f.getMonth()]}`
 }
 
-// Suscribe a todos los proyectos y a sus items, devolviendo las fechas clave
-// aplanadas. (La pestaña de Calendario es de solo lectura sobre estos datos.)
+// Fechas de los proyectos aplanadas: la fecha límite (`fechaClave`) y el
+// "cuándo lo hago" (`cuando`) de cada paso. hogarId null = Proyectos apagado.
+// (La pestaña de Calendario es de solo lectura sobre estos datos.)
 function useFechasProyectos(hogarId) {
-  const [proyectos, setProyectos] = useState([])
-  const [itemsPorProyecto, setItemsPorProyecto] = useState({})
-
-  useEffect(() => {
-    // hogarId a null = el usuario tiene Proyectos desactivado en Ajustes.
-    if (!hogarId) {
-      setProyectos([])
-      return
-    }
-    return escucharProyectos(hogarId, setProyectos)
-  }, [hogarId])
-
-  const idsClave = proyectos.map((p) => p.id).join(',')
-  useEffect(() => {
-    if (!hogarId) return
-    const unsubs = proyectos.map((p) =>
-      escucharItemsProyecto(hogarId, p.id, (items) =>
-        setItemsPorProyecto((prev) => ({ ...prev, [p.id]: items }))
-      )
-    )
-    return () => unsubs.forEach((u) => u())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hogarId, idsClave])
-
+  const { proyectos, itemsPorProyecto } = useProyectosConItems(hogarId)
   return useMemo(() => {
     const out = []
     for (const p of proyectos) {
       for (const it of itemsPorProyecto[p.id] || []) {
-        if (it.fechaClave) {
-          out.push({ id: it.id, nombre: it.nombre, proyecto: p.nombre, proyectoIcono: p.icono, fecha: it.fechaClave, hecho: it.hecho })
-        }
+        const base = { nombre: it.nombre, proyecto: p.nombre, proyectoIcono: p.icono, hecho: it.hecho }
+        if (it.fechaClave) out.push({ ...base, id: `${it.id}-l`, fecha: it.fechaClave, tipo: 'limite' })
+        if (it.cuando) out.push({ ...base, id: `${it.id}-c`, fecha: it.cuando, tipo: 'cuando' })
       }
     }
     return out
@@ -347,7 +324,9 @@ export default function Calendario() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate font-semibold text-bosque ${p.hecho ? 'line-through opacity-60' : ''}`}>{p.nombre}</span>
-                  <span className="block truncate text-xs text-oliva-oscuro">{t('cal.origenProyecto', { nombre: p.proyecto })}</span>
+                  <span className="block truncate text-xs text-oliva-oscuro">
+                    {t(p.tipo === 'cuando' ? 'cal.hacerProyecto' : 'cal.origenProyecto', { nombre: p.proyecto })}
+                  </span>
                 </span>
               </div>
             ))}

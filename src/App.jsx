@@ -23,7 +23,7 @@ import Dietas from './pages/Dietas'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
-const CABECERA_OSCURA = new Set(['tareas', 'gym', 'calendario'])
+const CABECERA_OSCURA = new Set(['tareas', 'gym', 'calendario', 'proyectos'])
 const COLOR_CABECERA = '#1D4E5B' // el mismo que CabeceraTareas (Tareas.jsx)
 
 export default function App() {

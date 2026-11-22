@@ -708,20 +708,48 @@ function fechaClaveATimestamp(str) {
   return Timestamp.fromMillis(new Date(y, m - 1, d).getTime())
 }
 
-export async function crearProyecto(hogarId, { nombre, icono }, uid) {
+// Número o null a partir de lo tecleado ("1.250,50" → 1250.5).
+function importe(v) {
+  if (v == null || v === '') return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  let s = String(v).replace(/[^\d.,-]/g, '')
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')
+  const n = Number(s)
+  return s && Number.isFinite(n) ? n : null
+}
+
+function limpiarFases(fases) {
+  if (!Array.isArray(fases)) return []
+  return [...new Set(fases.map((f) => String(f || '').trim()).filter(Boolean))].slice(0, 8)
+}
+
+export async function crearProyecto(hogarId, { nombre, icono, presupuesto, fases, estado }, uid) {
   return addDoc(proyectosCol(hogarId), {
     nombre: nombre.trim(),
     icono: icono || '📦',
+    estado: estado || 'activo',
+    presupuesto: importe(presupuesto),
+    fases: limpiarFases(fases),
     creadoPor: uid,
     creadoEn: serverTimestamp(),
+    ultimaActividad: serverTimestamp(),
   })
 }
 
-export async function actualizarProyecto(hogarId, proyectoId, { nombre, icono }) {
-  await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId), {
-    nombre: nombre.trim(),
-    icono: icono || '📦',
-  })
+// Actualización parcial: solo cambia los campos que vienen.
+export async function actualizarProyecto(hogarId, proyectoId, { nombre, icono, presupuesto, fases, estado }) {
+  const datos = { ultimaActividad: serverTimestamp() }
+  if (nombre != null) datos.nombre = nombre.trim()
+  if (icono != null) datos.icono = icono || '📦'
+  if (presupuesto !== undefined) datos.presupuesto = importe(presupuesto)
+  if (fases !== undefined) datos.fases = limpiarFases(fases)
+  if (estado) datos.estado = estado
+  await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId), datos)
+}
+
+function tocarProyecto(hogarId, proyectoId) {
+  return updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId), { ultimaActividad: serverTimestamp() })
 }
 
 export async function eliminarProyecto(hogarId, proyectoId) {
@@ -746,42 +774,116 @@ function limpiarEnlaces(enlaces) {
     .filter((e) => e.url)
 }
 
-export async function crearItemProyecto(hogarId, proyectoId, { nombre, notas, enlaces, fechaClave, dependencias }, uid) {
-  return addDoc(itemsProyectoCol(hogarId, proyectoId), {
+// Opciones de presupuesto de un paso: [{ id, nombre, importe, notas }].
+function limpiarOpciones(opciones) {
+  if (!Array.isArray(opciones)) return []
+  return opciones
+    .map((o) => ({
+      id: o?.id || Math.random().toString(36).slice(2, 10),
+      nombre: (o?.nombre || '').trim(),
+      importe: importe(o?.importe),
+      notas: (o?.notas || '').trim(),
+    }))
+    .filter((o) => o.nombre || o.importe != null)
+}
+
+// Campos "de ficha" de un paso, comunes a crear y editar.
+function camposItem({ nombre, notas, enlaces, fechaClave, dependencias, fase, costePrevisto, costeReal, opciones, opcionElegida, responsable, cuando, puntos }) {
+  const ops = limpiarOpciones(opciones)
+  return {
     nombre: nombre.trim(),
     notas: (notas || '').trim(),
     enlaces: limpiarEnlaces(enlaces),
     fechaClave: fechaClaveATimestamp(fechaClave),
     dependencias: Array.isArray(dependencias) ? dependencias : [],
+    fase: fase || null,
+    costePrevisto: importe(costePrevisto),
+    costeReal: importe(costeReal),
+    opciones: ops,
+    opcionElegida: ops.some((o) => o.id === opcionElegida) ? opcionElegida : null,
+    responsable: responsable || null,
+    cuando: fechaClaveATimestamp(cuando),
+    puntos: Math.max(0, Math.round(Number(puntos) || 0)),
+  }
+}
+
+export async function crearItemProyecto(hogarId, proyectoId, datos, uid) {
+  const ref = await addDoc(itemsProyectoCol(hogarId, proyectoId), {
+    ...camposItem(datos),
+    estado: 'pendiente',
     hecho: false,
     hechoPor: null,
     hechoEn: null,
+    // Al final de la lista (el orden manual se reescribe al mover).
+    orden: Date.now(),
     creadoPor: uid,
     creadoEn: serverTimestamp(),
   })
+  await tocarProyecto(hogarId, proyectoId)
+  return ref
 }
 
-export async function actualizarItemProyecto(hogarId, proyectoId, itemId, { nombre, notas, enlaces, fechaClave, dependencias }) {
+export async function actualizarItemProyecto(hogarId, proyectoId, itemId, datos) {
   await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId), {
-    nombre: nombre.trim(),
-    notas: (notas || '').trim(),
-    enlaces: limpiarEnlaces(enlaces),
+    ...camposItem(datos),
     enlace: deleteField(), // migra el campo antiguo de enlace único
-    fechaClave: fechaClaveATimestamp(fechaClave),
-    dependencias: Array.isArray(dependencias) ? dependencias : [],
+    actualizadoEn: serverTimestamp(),
   })
+  await tocarProyecto(hogarId, proyectoId)
 }
 
 export async function eliminarItemProyecto(hogarId, proyectoId, itemId) {
   await deleteDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId))
 }
 
+// Cambia el estado de un paso ('pendiente' | 'curso' | 'hecho'), manteniendo
+// `hecho` sincronizado (lo lee el Calendario). Si el paso da puntos, se suman
+// la PRIMERA vez que se completa (desmarcar y volver a marcar no suma más).
+export async function cambiarEstadoItemProyecto(hogarId, proyecto, item, estado, uid) {
+  const hecho = estado === 'hecho'
+  const ref = doc(db, 'hogares', hogarId, 'proyectos', proyecto.id, 'items', item.id)
+  const datos = {
+    estado,
+    hecho,
+    hechoPor: hecho ? uid : null,
+    hechoEn: hecho ? serverTimestamp() : null,
+  }
+  const puntos = Math.max(0, Number(item.puntos) || 0)
+  const darPuntos = hecho && puntos > 0 && !item.puntosDados
+  if (darPuntos) datos.puntosDados = true
+  await updateDoc(ref, datos)
+  if (darPuntos) {
+    await updateDoc(refUsuario(uid), { puntos: increment(puntos) })
+    await registrarMovimiento(hogarId, {
+      tipo: 'proyecto',
+      uid,
+      concepto: `${item.nombre} · ${proyecto.nombre}`,
+      icono: proyecto.icono || '📦',
+      puntos,
+    })
+  }
+  await tocarProyecto(hogarId, proyecto.id)
+}
+
+// Compatibilidad: marcar/desmarcar como antes.
 export async function alternarItemProyecto(hogarId, proyectoId, itemId, hecho, uid) {
   await updateDoc(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', itemId), {
+    estado: hecho ? 'hecho' : 'pendiente',
     hecho,
     hechoPor: hecho ? uid : null,
     hechoEn: hecho ? serverTimestamp() : null,
   })
+}
+
+// Reescribe el orden manual (y la fase) de los pasos: `orden` = [{ id, fase }]
+// ya en el orden final.
+export async function reordenarItemsProyecto(hogarId, proyectoId, orden) {
+  const batch = writeBatch(db)
+  orden.forEach(({ id, fase }, i) => {
+    batch.update(doc(db, 'hogares', hogarId, 'proyectos', proyectoId, 'items', id), { orden: i * 10, fase: fase || null })
+  })
+  await batch.commit()
+  await tocarProyecto(hogarId, proyectoId)
 }
 
 export function escucharItemsProyecto(hogarId, proyectoId, cb) {
