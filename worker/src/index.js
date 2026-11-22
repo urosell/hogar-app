@@ -228,52 +228,14 @@ async function procesarRecordatorio(sa, fcmToken, fsToken, hid, miembros, recDoc
   }
 
   const nAviso = avisos + 1
+  const tocaEscalar = nAviso >= maxAvisos && !!f.avisarPareja && !escalado
 
-  // Destinatario del aviso.
-  const destUser = await fsGet(sa, fsToken, `usuarios/${f.uid}`)
-  const destTokens = destUser ? decode(destUser.fields?.fcmTokens) || [] : []
-  const destNombre = destUser ? decode(destUser.fields?.nombre) || '' : ''
-
-  const persona = destNombre || 'tu pareja'
-  const vars = { nombre: f.nombre, persona, n: nAviso, total: maxAvisos }
-  const titulo = plantilla(nAviso > 1 ? TXT.insisteTitulo : TXT.personaTitulo, vars)
-  const cuerpo = (f.mensaje || '').trim() || plantilla(TXT.personaCuerpoFallback, vars)
-  if (destTokens.length) {
-    await enviarFCM(fcmToken, sa, destTokens, {
-      title: titulo,
-      body: cuerpo,
-      link: '/',
-      tag: `rec-${rid}`,          // el nuevo aviso reemplaza al anterior
-      badge: '1',                 // globito en el icono hasta confirmar
-      requireInteraction: '1',    // fijo en Android (iOS lo ignora)
-    })
-  }
-
-  // Escalado en el último aviso: se avisa a TODAS las demás personas del hogar
-  // (en hogares de 3–4, no solo a una).
-  let nuevoEscalado = escalado
-  if (nAviso >= maxAvisos && f.avisarPareja && !escalado) {
-    const otros = miembros.filter((u) => u !== f.uid)
-    const tokens = []
-    for (const ouid of otros) {
-      const u = await fsGet(sa, fsToken, `usuarios/${ouid}`)
-      const tk = u ? decode(u.fields?.fcmTokens) || [] : []
-      for (const t of tk) tokens.push(t)
-    }
-    const unicos = [...new Set(tokens)]
-    if (unicos.length) {
-      await enviarFCM(fcmToken, sa, unicos, {
-        title: plantilla(TXT.parejaTitulo, vars),
-        body: plantilla(TXT.parejaCuerpo, vars),
-        link: '/',
-        tag: `rec-esc-${rid}`,
-      })
-    }
-    nuevoEscalado = true
-  }
-
-  // Persiste el estado del día.
-  await fsPatch(
+  // 1º se RESERVA el aviso y luego se envía, no al revés. Si se enviaba primero
+  // y el Worker moría (o fallaba la escritura) antes de guardar el contador, el
+  // siguiente tick volvía a ver "0 avisos" y repetía: avisos cada 5 min sin fin.
+  // La precondición `updateTime` hace además que, si dos ejecuciones del cron
+  // leen el mismo estado, solo una gane; la otra no envía nada.
+  const reservado = await fsPatch(
     sa,
     fsToken,
     `hogares/${hid}/recordatorios/${rid}`,
@@ -281,12 +243,74 @@ async function procesarRecordatorio(sa, fcmToken, fsToken, hid, miembros, recDoc
       estadoFecha: vStr(fechaHoy),
       avisosEnviados: vInt(nAviso),
       ultimoAvisoEn: vTs(new Date().toISOString()),
-      escaladoEnviado: vBool(nuevoEscalado),
+      escaladoEnviado: vBool(escalado || tocaEscalar),
     },
-    ['estadoFecha', 'avisosEnviados', 'ultimoAvisoEn', 'escaladoEnviado']
+    ['estadoFecha', 'avisosEnviados', 'ultimoAvisoEn', 'escaladoEnviado'],
+    recDoc.updateTime
   )
+  if (!reservado) return
 
-  console.log(JSON.stringify({ hid, rid, nAviso, maxAvisos, escalado: nuevoEscalado }))
+  // Destinatario del aviso.
+  const destUser = await fsGet(sa, fsToken, `usuarios/${f.uid}`)
+  const destNombre = destUser ? decode(destUser.fields?.nombre) || '' : ''
+
+  const persona = destNombre || 'tu pareja'
+  const vars = { nombre: f.nombre, persona, n: nAviso, total: maxAvisos }
+  const titulo = plantilla(nAviso > 1 ? TXT.insisteTitulo : TXT.personaTitulo, vars)
+  const cuerpo = (f.mensaje || '').trim() || plantilla(TXT.personaCuerpoFallback, vars)
+  const enviados = new Set()
+  await enviarAUsuario(sa, fcmToken, fsToken, f.uid, destUser, enviados, {
+    title: titulo,
+    body: cuerpo,
+    link: '/',
+    tag: `rec-${rid}`,          // el nuevo aviso reemplaza al anterior
+    badge: '1',                 // globito en el icono hasta confirmar
+    requireInteraction: '1',    // fijo en Android (iOS lo ignora)
+  })
+
+  // Escalado en el último aviso: se avisa a TODAS las demás personas del hogar
+  // (en hogares de 3–4, no solo a una).
+  if (tocaEscalar) {
+    for (const ouid of miembros.filter((u) => u !== f.uid)) {
+      const u = await fsGet(sa, fsToken, `usuarios/${ouid}`)
+      await enviarAUsuario(sa, fcmToken, fsToken, ouid, u, enviados, {
+        title: plantilla(TXT.parejaTitulo, vars),
+        body: plantilla(TXT.parejaCuerpo, vars),
+        link: '/',
+        tag: `rec-esc-${rid}`,
+      })
+    }
+  }
+
+  console.log(JSON.stringify({ hid, rid, nAviso, maxAvisos, escalado: escalado || tocaEscalar, tokens: enviados.size }))
+}
+
+// Envía a todos los tokens de un usuario (sin repetidos, y sin repetir los que
+// ya se usaron en este mismo aviso) y poda del perfil los que FCM da por
+// muertos. Sin esa poda, `fcmTokens` solo crecía: cada token viejo que siga vivo
+// en el mismo móvil es un aviso duplicado más.
+async function enviarAUsuario(sa, fcmToken, fsToken, uid, userDoc, enviados, payload) {
+  if (!userDoc) return
+  const todos = decode(userDoc.fields?.fcmTokens) || []
+  const tokens = [...new Set(todos)].filter((t) => t && !enviados.has(t))
+  for (const t of tokens) enviados.add(t)
+  if (!tokens.length) return
+
+  const { caducados } = await enviarFCM(fcmToken, sa, tokens, payload)
+  if (!caducados.length) return
+
+  const quedan = [...new Set(todos)].filter((t) => t && !caducados.includes(t))
+  // Precondición: si la app acaba de guardar un token nuevo, no lo pisamos
+  // (la poda se reintentará en el siguiente aviso).
+  await fsPatch(
+    sa,
+    fsToken,
+    `usuarios/${uid}`,
+    { fcmTokens: { arrayValue: { values: quedan.map(vStr) } } },
+    ['fcmTokens'],
+    userDoc.updateTime
+  )
+  console.log(JSON.stringify({ uid, podados: caducados.length, quedan: quedan.length }))
 }
 
 // ─── Envío FCM (compartido por fetch y scheduled) ──────────────────────────
@@ -304,6 +328,7 @@ async function enviarFCM(accessToken, sa, tokens, { title, body, link, tag, badg
 
   let sent = 0
   const invalid = []
+  const caducados = [] // solo los que FCM da por muertos (se pueden borrar sin miedo)
   for (const token of destinos) {
     const res = await fetch(url, {
       method: 'POST',
@@ -321,12 +346,14 @@ async function enviarFCM(accessToken, sa, tokens, { title, body, link, tag, badg
     } else {
       const err = await res.json().catch(() => ({}))
       const code = err?.error?.status || ''
+      const fcmCode = (err?.error?.details || []).map((d) => d.errorCode).find(Boolean) || ''
       if (code === 'NOT_FOUND' || code === 'UNREGISTERED' || code === 'INVALID_ARGUMENT') {
         invalid.push(token)
       }
+      if (code === 'NOT_FOUND' || fcmCode === 'UNREGISTERED') caducados.push(token)
     }
   }
-  return { sent, invalid }
+  return { sent, invalid, caducados }
 }
 
 // ─── Firestore REST (usa la service account; salta las reglas) ─────────────
@@ -357,14 +384,19 @@ async function fsGet(sa, token, docPath) {
   return res.json()
 }
 
-async function fsPatch(sa, token, docPath, fields, mask) {
-  const qs = mask.map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&')
+// Devuelve true si se escribió. Con `updateTime`, solo escribe si el documento
+// no ha cambiado desde que se leyó (si no, Firestore responde 400/409
+// FAILED_PRECONDITION y se devuelve false).
+async function fsPatch(sa, token, docPath, fields, mask, updateTime) {
+  let qs = mask.map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&')
+  if (updateTime) qs += `&currentDocument.updateTime=${encodeURIComponent(updateTime)}`
   const res = await fetch(`${fsBase(sa)}/${docPath}?${qs}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields }),
   })
   if (!res.ok) console.log('fsPatch', docPath, res.status, await res.text())
+  return res.ok
 }
 
 // Encoders de valores Firestore.

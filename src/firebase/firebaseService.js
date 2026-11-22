@@ -101,9 +101,31 @@ export async function guardarModulos(uid, { activos, principales }) {
   await updateDoc(refUsuario(uid), { modulos: { activos, principales } })
 }
 
+// Cada dispositivo recuerda (localStorage) el último token que guardó. Si el
+// token ha cambiado, se quita el viejo además de añadir el nuevo: antes solo se
+// añadían y `fcmTokens` crecía sin fin; cada token viejo que siguiera vivo en el
+// mismo móvil era un aviso repetido.
+const CLAVE_TOKEN_FCM = 'hogar.fcmToken'
+
 export async function guardarTokenFcm(uid, token) {
   if (!token) return
-  await updateDoc(refUsuario(uid), { fcmTokens: arrayUnion(token) })
+  let anterior = null
+  try {
+    anterior = localStorage.getItem(`${CLAVE_TOKEN_FCM}.${uid}`)
+  } catch {
+    /* sin localStorage: solo se añade */
+  }
+  if (anterior === token) return
+
+  const batch = writeBatch(db)
+  if (anterior) batch.update(refUsuario(uid), { fcmTokens: arrayRemove(anterior) })
+  batch.update(refUsuario(uid), { fcmTokens: arrayUnion(token) })
+  await batch.commit()
+  try {
+    localStorage.setItem(`${CLAVE_TOKEN_FCM}.${uid}`, token)
+  } catch {
+    /* no pasa nada: la próxima vez solo se repite el arrayUnion */
+  }
 }
 
 export async function quitarTokenFcm(uid, token) {
