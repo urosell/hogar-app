@@ -524,6 +524,29 @@ export async function eliminarItem(hogarId, listaId, itemId) {
   await deleteDoc(doc(db, 'hogares', hogarId, 'listas', listaId, 'items', itemId))
 }
 
+// Edita nombre, cantidad y/o categoría de un producto. Si cambia la categoría,
+// se recuerda también en el frecuente, para que la próxima vez salga bien.
+export async function actualizarItem(hogarId, listaId, itemId, { nombre, cantidad, categoria }) {
+  const datos = {}
+  if (nombre != null) datos.nombre = nombre.trim()
+  if (cantidad !== undefined) datos.cantidad = cantidad ? String(cantidad).trim() : null
+  if (categoria) datos.categoria = categoria
+  await updateDoc(doc(db, 'hogares', hogarId, 'listas', listaId, 'items', itemId), datos)
+  if (categoria && datos.nombre) {
+    const snap = await getDocs(query(frecuentesCol(hogarId), where('clave', '==', datos.nombre.toLowerCase())))
+    if (!snap.empty) await updateDoc(snap.docs[0].ref, { categoria })
+  }
+}
+
+// Borra para siempre todo lo comprado de una lista (vaciar el historial).
+export async function vaciarHistorial(hogarId, listaId) {
+  const snap = await getDocs(query(itemsCol(hogarId, listaId), where('comprado', '==', true)))
+  if (snap.empty) return
+  const batch = writeBatch(db)
+  snap.docs.forEach((d) => batch.delete(d.ref))
+  await batch.commit()
+}
+
 // Devuelve TODO el historial a la lista (deshace todos los comprados de golpe).
 export async function deshacerHistorial(hogarId, listaId) {
   const q = query(itemsCol(hogarId, listaId), where('comprado', '==', true))
