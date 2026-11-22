@@ -111,7 +111,10 @@ export default function App() {
           backgroundColor: oscura ? COLOR_CABECERA : 'rgb(var(--fondo-a) / 0.72)',
         }}
       >
-        <h1 className={`text-2xl font-bold lg:text-3xl ${oscura ? 'text-white' : 'text-bosque'}`}>{TITULOS[tab]}</h1>
+        {/* Con cabecera oscura el saludo hace de título: el nombre de la
+            sección queda solo para lectores de pantalla. */}
+        <h1 className={oscura ? 'sr-only' : 'text-2xl font-bold text-bosque lg:text-3xl'}>{TITULOS[tab]}</h1>
+        {oscura && <span aria-hidden="true" />}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setHistorialAbierto(true)}
