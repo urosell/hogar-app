@@ -395,9 +395,11 @@ function CabeceraTareas({ nombre, pendientesHoy, yo }) {
         ? t('tareas.resumenUna')
         : t('tareas.resumenVarias', { n: pendientesHoy })
   return (
-    <div className="relative overflow-hidden rounded-[28px] px-5 py-6 text-white" style={{ background: '#1D4E5B' }}>
+    // -mx-4 anula el margen lateral del <main>: va a todo el ancho, pegada a la
+    // barra de título (que en Tareas también es petróleo), redondeada solo abajo.
+    <div className="relative -mx-4 overflow-hidden rounded-b-[32px] px-5 pb-7 pt-2 text-white" style={{ background: '#1D4E5B' }}>
       <svg
-        className="pointer-events-none absolute -right-6 top-6"
+        className="pointer-events-none absolute -right-6 top-0"
         width="150"
         height="110"
         viewBox="0 0 150 110"

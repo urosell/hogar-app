@@ -23,6 +23,9 @@ import Dietas from './pages/Dietas'
 import Ajustes from './pages/Ajustes'
 import AvisoConfig from './pages/AvisoConfig'
 
+const CABECERA_OSCURA = new Set(['tareas'])
+const COLOR_CABECERA = '#1D4E5B' // el mismo que CabeceraTareas (Tareas.jsx)
+
 export default function App() {
   const { cargando, authUser, tieneHogar, perfilCompleto, usuario, hogarId, miembros, modulos } = useApp()
   const { theme, toggle } = useTheme()
@@ -36,6 +39,12 @@ export default function App() {
   const [aviso, setAviso] = useState(null)
   const [movimientos, setMovimientos] = useState([]) // ledger de actividad del hogar
   const [historialAbierto, setHistorialAbierto] = useState(false)
+
+  // Pestañas con cabecera petróleo (rediseño "ilustrado plano"): la barra de
+  // título se pinta del mismo color que la cabecera de la página, que va
+  // pegada debajo a todo el ancho. Se irán añadiendo gym y calendario.
+  const oscura = CABECERA_OSCURA.has(tab)
+  const btnIcono = oscura ? 'text-white/85 hover:bg-white/10' : 'text-oliva-oscuro hover:bg-crema-oscuro'
 
   // Mapa uid → miembro, para pintar quién hizo cada movimiento.
   const porUid = Object.fromEntries((miembros || []).map((m) => [m.id, m]))
@@ -98,15 +107,15 @@ export default function App() {
         className="sticky top-0 z-20 flex items-center justify-between px-4 pb-3 backdrop-blur"
         style={{
           paddingTop: 'calc(0.75rem + var(--safe-top))',
-          // Se funde con la parte alta del degradado del fondo (fijo al viewport).
-          backgroundColor: 'rgb(var(--fondo-a) / 0.72)',
+          // Petróleo en las pestañas con cabecera oscura; si no, el fondo translúcido.
+          backgroundColor: oscura ? COLOR_CABECERA : 'rgb(var(--fondo-a) / 0.72)',
         }}
       >
-        <h1 className="text-2xl font-bold text-bosque lg:text-3xl">{TITULOS[tab]}</h1>
+        <h1 className={`text-2xl font-bold lg:text-3xl ${oscura ? 'text-white' : 'text-bosque'}`}>{TITULOS[tab]}</h1>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setHistorialAbierto(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${btnIcono}`}
             aria-label={t('tareas.actividad')}
           >
             <IconoHistorial />
@@ -125,8 +134,8 @@ export default function App() {
             }}
             className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
               tab === 'tareas' && seccionTareas === 'aprobar'
-                ? 'bg-oliva text-crema-claro'
-                : 'text-oliva-oscuro hover:bg-crema-oscuro'
+                ? oscura ? 'bg-dorado text-contorno' : 'bg-oliva text-crema-claro'
+                : btnIcono
             }`}
             aria-label={t('aria.porAprobar')}
           >
@@ -140,14 +149,14 @@ export default function App() {
           )}
           <button
             onClick={toggle}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${btnIcono}`}
             aria-label={theme === 'day' ? t('aria.modoNoche') : t('aria.modoDia')}
           >
             {theme === 'day' ? <IconoLuna /> : <IconoSol />}
           </button>
           <button
             onClick={() => setAjustesAbierto(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro"
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${btnIcono}`}
             aria-label={t('aria.ajustes')}
           >
             <IconoAjustes />
