@@ -222,6 +222,15 @@ const ES = {
   'tareas.detGastados': 'Gastados',
   'tareas.actividad': 'Actividad reciente',
   'tareas.actividadVacia': 'Aún no hay actividad',
+  'tareas.hola': '¡Hola, {nombre}!',
+  'tareas.resumenNinguna': 'Todo hecho por hoy.',
+  'tareas.resumenUna': 'Hoy queda 1 tarea en casa.',
+  'tareas.resumenVarias': 'Hoy quedan {n} tareas en casa.',
+  'tareas.puntosTitulo': 'Vuestros puntos',
+  'tareas.ptsDisp': 'pts disp.',
+  'tareas.filtroActivas': 'Activas',
+  'tareas.filtroAprobar': 'Por aprobar',
+  'tareas.completarPts': 'Completar · +{n} pts',
 
   // Notificaciones (las genera el dispositivo emisor, en su idioma)
   'notif.tareaHechaTitulo': '✅ Tarea completada',
@@ -806,6 +815,15 @@ const CA = {
   'tareas.detGastados': 'Gastats',
   'tareas.actividad': 'Activitat recent',
   'tareas.actividadVacia': 'Encara no hi ha activitat',
+  'tareas.hola': 'Hola, {nombre}!',
+  'tareas.resumenNinguna': 'Tot fet per avui.',
+  'tareas.resumenUna': 'Avui queda 1 tasca a casa.',
+  'tareas.resumenVarias': 'Avui queden {n} tasques a casa.',
+  'tareas.puntosTitulo': 'Els vostres punts',
+  'tareas.ptsDisp': 'pts disp.',
+  'tareas.filtroActivas': 'Actives',
+  'tareas.filtroAprobar': 'Per aprovar',
+  'tareas.completarPts': 'Completar · +{n} pts',
 
   // Notificaciones
   'notif.tareaHechaTitulo': '✅ Tasca completada',

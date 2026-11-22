@@ -15,6 +15,7 @@ import { enviarPushHogar } from '../firebase/push'
 import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
 import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
 import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
+import IlustracionTarea from '../components/IlustracionTarea'
 import { useIdioma } from '../context/IdiomaContext'
 
 const DIA = 24 * 60 * 60 * 1000
@@ -137,8 +138,34 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <CabeceraTareas nombre={usuario?.nombre} pendientesHoy={paraHacer.length} yo={porUid[uid]} />
+
       <BarraPuntos miembros={miembros} uidActual={uid} festejo={festejo} />
+
+      {/* Filtro Activas / Por aprobar (la campana de arriba sigue funcionando) */}
+      <div className="flex gap-2">
+        {[
+          ['activas', t('tareas.filtroActivas'), 0],
+          ['aprobar', t('tareas.filtroAprobar'), porAprobarYo.length],
+        ].map(([id, texto, n]) => (
+          <button
+            key={id}
+            onClick={() => setSeccion(id)}
+            aria-pressed={seccion === id}
+            className={`flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors ${
+              seccion === id ? 'bg-bosque text-crema' : 'text-oliva-oscuro hover:bg-crema-oscuro'
+            }`}
+          >
+            {texto}
+            {n > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-dorado px-1 text-xs font-bold text-contorno">
+                {n}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {seccion === 'activas' && (
         <>
@@ -202,7 +229,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       {/* Botón flotante crear */}
       <button
         onClick={() => setModalAbierto(true)}
-        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-dorado text-contorno shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('tareas.nuevaTareaAria')}
       >
@@ -347,6 +374,51 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
   )
 }
 
+// Color de cada persona en las tarjetas de puntos (por orden de puntos).
+// `fuerte` para la barra de progreso, `tinte` para el fondo del avatar.
+const COLORES_MIEMBRO = [
+  { fuerte: '#3E8FA3', tinte: '#DCE8EC' },
+  { fuerte: '#C9775A', tinte: '#F6E3D6' },
+  { fuerte: '#E0A92E', tinte: '#FBEFC8' },
+  { fuerte: '#5FA88E', tinte: '#D9EDE5' },
+]
+
+// Cabecera petróleo con saludo y resumen del día (estilo ilustrado plano).
+// Colores fijos: es la misma pieza oscura en el tema de día y en el de noche.
+function CabeceraTareas({ nombre, pendientesHoy, yo }) {
+  const { t } = useIdioma()
+  const nivel = yo ? nivelDesdePuntos(yo.puntos || 0) : null
+  const resumen =
+    pendientesHoy === 0
+      ? t('tareas.resumenNinguna')
+      : pendientesHoy === 1
+        ? t('tareas.resumenUna')
+        : t('tareas.resumenVarias', { n: pendientesHoy })
+  return (
+    <div className="relative overflow-hidden rounded-[28px] px-5 py-6 text-white" style={{ background: '#1D4E5B' }}>
+      <svg
+        className="pointer-events-none absolute -right-6 top-6"
+        width="150"
+        height="110"
+        viewBox="0 0 150 110"
+        aria-hidden="true"
+      >
+        <rect x="40" y="6" width="120" height="10" rx="5" fill="#2E6575" />
+        <rect x="20" y="26" width="140" height="10" rx="5" fill="#2E6575" />
+        <rect x="55" y="46" width="110" height="10" rx="5" fill="#2E6575" />
+        <circle cx="42" cy="88" r="15" fill="#F2C14E" />
+      </svg>
+      <div className="relative max-w-[15rem] space-y-1.5">
+        <p className="text-2xl font-bold leading-tight">{t('tareas.hola', { nombre: nombre || '' })}</p>
+        <p className="text-sm leading-relaxed" style={{ color: '#D5E3E7' }}>
+          {resumen}
+          {nivel?.siguiente && ` ${t('tareas.faltanPts', { n: nivel.faltan, nivel: t('nivel.' + nivel.siguiente.nombre) })}.`}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function BarraPuntos({ miembros, uidActual, festejo }) {
   const { t } = useIdioma()
   const [detalle, setDetalle] = useState(null) // miembro con el popup de progresión abierto
@@ -355,64 +427,73 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
   const detalleVivo = detalle ? miembros.find((m) => m.id === detalle.id) : null
   return (
     <>
-      <div className="tarjeta flex items-stretch justify-around gap-2">
-        {ordenados.map((m) => {
-          const nivel = nivelDesdePuntos(m.puntos || 0)
-          const disp = monederoDisponible(m)
-          const esActual = m.id === uidActual
-          const festeja = festejo?.uid === m.id
-          return (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setDetalle(m)}
-              className="relative flex flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1 transition-transform active:scale-95"
-              aria-label={t('tareas.verProgresion', { nombre: m.nombre || '—' })}
-            >
-              {/* Pop de "+X pts" sobre quien completa la tarea */}
-              {festeja && (
-                <span
-                  key={festejo.key}
-                  className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-oliva px-2.5 py-1 text-sm font-bold text-crema-claro shadow-tarjeta"
-                >
-                  +{festejo.puntos} pts
-                </span>
-              )}
-              <div
-                className={`flex h-14 w-14 items-center justify-center rounded-full bg-crema-oscuro text-3xl ${
-                  esActual ? 'ring-2 ring-oliva' : ''
+      <section className="space-y-3">
+        <h2 className="text-lg text-bosque">{t('tareas.puntosTitulo')}</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {ordenados.map((m, i) => {
+            const nivel = nivelDesdePuntos(m.puntos || 0)
+            const disp = monederoDisponible(m)
+            const esActual = m.id === uidActual
+            const festeja = festejo?.uid === m.id
+            const color = COLORES_MIEMBRO[i % COLORES_MIEMBRO.length]
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setDetalle(m)}
+                className={`tarjeta relative flex flex-col items-start gap-1.5 overflow-hidden text-left transition-transform active:scale-[0.97] ${
+                  esActual ? 'ring-2 ring-oliva/40' : ''
                 }`}
+                aria-label={t('tareas.verProgresion', { nombre: m.nombre || '—' })}
               >
-                {m.icono || '🙂'}
-              </div>
-              <p className="text-sm font-bold text-bosque">{m.nombre || '—'}</p>
-              <p className={`text-xl font-extrabold text-oliva leading-none ${festeja ? 'late' : ''}`}>
-                {m.puntos || 0} <span className="text-xs font-bold">pts</span>
-              </p>
-              <p className="text-[11px] font-bold text-oliva-oscuro/70">
-                💰 {disp} {t('tareas.disp')}
-              </p>
-              <span className="rounded-full bg-crema-oscuro px-2.5 py-0.5 text-[11px] font-bold text-oliva-oscuro">
-                {nivel.actual.emoji} Nv.{nivel.nivel}
-              </span>
-              <div className="h-1.5 w-full max-w-[5.5rem] overflow-hidden rounded-full bg-crema-oscuro">
-                <div
-                  className="h-full rounded-full bg-oliva transition-all duration-500"
-                  style={{ width: `${Math.round(nivel.progreso * 100)}%` }}
+                {/* Círculo decorativo de la esquina */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full"
+                  style={{ background: color.tinte, opacity: 0.55 }}
                 />
-              </div>
-            </button>
-          )
-        })}
-        {miembros.length < 2 && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 opacity-60">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-crema-oscuro text-2xl text-oliva-oscuro">
-              ➕
+                {/* Pop de "+X pts" sobre quien completa la tarea */}
+                {festeja && (
+                  <span
+                    key={festejo.key}
+                    className="pop-pts pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-xl bg-dorado px-2.5 py-1 text-sm font-bold text-contorno shadow-tarjeta"
+                  >
+                    +{festejo.puntos} pts
+                  </span>
+                )}
+                <div className="relative flex items-center gap-2">
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-2xl"
+                    style={{ background: color.tinte }}
+                  >
+                    {m.icono || '🙂'}
+                  </span>
+                  <span className="truncate text-sm font-semibold text-bosque">{m.nombre || '—'}</span>
+                </div>
+                <p className={`relative text-3xl font-bold leading-none text-bosque ${festeja ? 'late' : ''}`}>
+                  {disp}
+                  <span className="ml-1 text-xs font-medium text-oliva-oscuro">{t('tareas.ptsDisp')}</span>
+                </p>
+                <p className="text-xs text-oliva-oscuro">
+                  {t('nivel.' + nivel.actual.nombre)} · {t('tareas.nivelN', { n: nivel.nivel })}
+                </p>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-crema-oscuro">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round(nivel.progreso * 100)}%`, background: color.fuerte }}
+                  />
+                </div>
+              </button>
+            )
+          })}
+          {miembros.length < 2 && (
+            <div className="flex flex-col items-center justify-center gap-1.5 rounded-xl2 border-2 border-dashed border-borde p-4 opacity-70">
+              <IconoMas className="h-7 w-7 text-oliva-oscuro" />
+              <p className="text-xs font-semibold text-oliva-oscuro">{t('tareas.esperando')}</p>
             </div>
-            <p className="text-xs font-bold text-oliva-oscuro">{t('tareas.esperando')}</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </section>
 
       {/* Popup de progresión de puntos de un miembro */}
       <Modal abierto={!!detalleVivo} onCerrar={() => setDetalle(null)}>
@@ -493,44 +574,48 @@ function TareaCard({ tarea, porUid, onCompletar, onAbrir, descansando, saliendo 
   const { t, idioma } = useIdioma()
   const ultimo = porUid[tarea.ultimoCompletadoPor]
   const asignado = tarea.asignadoA ? porUid[tarea.asignadoA] : null
+  const frecuencia = tarea.permanente
+    ? t('tareas.recurrentePermanente')
+    : tarea.diaSemana != null
+      ? t('tareas.recurrenteSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })
+      : tarea.periodicidadDias != null
+        ? t('tareas.recurrenteCada', { n: tarea.periodicidadDias })
+        : t('tareas.unaSolaVez')
+  const detalle = [frecuencia, asignado ? t('tareas.asignadaA', { nombre: asignado.nombre }) : null]
+    .filter(Boolean)
+    .join(' · ')
   return (
-    <div className={`tarjeta mb-3 flex items-center gap-3 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}>
-      <button onClick={onAbrir} className="flex-1 cursor-pointer text-left" aria-label={t('tareas.opcionesAria')}>
-        <div className="flex items-center gap-2">
-          <p className="font-bold text-bosque">{tarea.nombre}</p>
-          {asignado && (
-            <span className="chip bg-oliva/15 text-oliva" title={t('tareas.asignadaA', { nombre: asignado.nombre })}>
-              {asignado.icono || '🙂'} {asignado.nombre}
-            </span>
-          )}
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-oliva-oscuro">
-          <span className="chip bg-oliva/15 text-oliva">+{tarea.puntos} pts</span>
-          {tarea.permanente ? (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">♾️ {t('tareas.siempre')}</span>
-          ) : tarea.diaSemana != null ? (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDiaSemana', { dia: DIAS_SEMANA_LARGO[idioma][tarea.diaSemana] })}</span>
-          ) : tarea.periodicidadDias != null ? (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.cadaDias', { n: tarea.periodicidadDias })}</span>
-          ) : (
-            <span className="chip bg-crema-oscuro text-oliva-oscuro">{t('tareas.unaVez')}</span>
-          )}
-          {descansando ? (
-            <span className="font-bold text-marron">
-              {tarea.diaSemana != null
-                ? textoQuedan(t, diasRestantes(tarea.proximaAparicion))
-                : t('tareas.vuelveEn', { n: diasRestantes(tarea.proximaAparicion) })}
-            </span>
-          ) : (
-            ultimo && <span>{t('tareas.ultimaVez')} {ultimo.icono} {ultimo.nombre}</span>
-          )}
-        </div>
+    <div className={`mb-4 flex items-center gap-3.5 ${descansando ? 'opacity-60' : ''} ${saliendo ? 'salida-completado' : ''}`}>
+      <button onClick={onAbrir} className="shrink-0 cursor-pointer rounded-2xl active:scale-95" aria-label={t('tareas.opcionesAria')}>
+        <IlustracionTarea nombre={tarea.nombre} tamano={68} />
       </button>
-      {!descansando && (
-        <button onClick={onCompletar} disabled={saliendo} className="btn-primario shrink-0 cursor-pointer px-4 py-2.5 text-sm">
-          {t('tareas.hecha')}
+      <div className="min-w-0 flex-1">
+        <button onClick={onAbrir} className="block w-full cursor-pointer text-left" aria-label={t('tareas.opcionesAria')}>
+          <p className="truncate font-semibold text-bosque">{tarea.nombre}</p>
+          <p className="mt-0.5 text-xs leading-snug text-oliva-oscuro">
+            {detalle}
+            {!descansando && ultimo && ` · ${t('tareas.ultimaVez')} ${ultimo.nombre}`}
+          </p>
         </button>
-      )}
+        {descansando ? (
+          <p className="mt-1 text-xs font-semibold text-marron">
+            {tarea.diaSemana != null
+              ? textoQuedan(t, diasRestantes(tarea.proximaAparicion))
+              : t('tareas.vuelveEn', { n: diasRestantes(tarea.proximaAparicion) })}
+          </p>
+        ) : (
+          <button
+            onClick={onCompletar}
+            disabled={saliendo}
+            className="-ml-1 mt-0.5 flex min-h-[2.25rem] cursor-pointer items-center gap-1 rounded-lg px-1 text-sm font-semibold text-oliva disabled:opacity-50"
+          >
+            {t('tareas.completarPts', { n: tarea.puntos })}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   )
 }
