@@ -548,12 +548,14 @@ function BarraPuntos({ miembros, uidActual, festejo }) {
                   </span>
                   <span className="truncate text-sm font-semibold text-bosque">{m.nombre || '—'}</span>
                 </div>
+                {/* En grande, los puntos totales (como antes del rediseño);
+                    debajo, los disponibles para gastar en premios. */}
                 <p className={`relative text-3xl font-bold leading-none text-bosque ${festeja ? 'late' : ''}`}>
-                  {disp}
-                  <span className="ml-1 text-xs font-medium text-oliva-oscuro">{t('tareas.ptsDisp')}</span>
+                  {m.puntos || 0}
+                  <span className="ml-1 text-xs font-medium text-oliva-oscuro">pts</span>
                 </p>
                 <p className="text-xs text-oliva-oscuro">
-                  {t('nivel.' + nivel.actual.nombre)} · {t('tareas.nivelN', { n: nivel.nivel })}
+                  {disp} {t('tareas.ptsDisp')} · {t('tareas.nivelN', { n: nivel.nivel })}
                 </p>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-crema-oscuro">
                   <div
