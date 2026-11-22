@@ -16,7 +16,7 @@ import {
 import { enviarPushHogar } from '../firebase/push'
 import { nivelDesdePuntos, monederoDisponible } from '../data/constantes'
 import { DIAS_SEMANA, DIAS_SEMANA_LARGO } from '../data/i18n'
-import { Modal, Vacio, IconoMas, SkeletonTarjetas } from '../components/ui'
+import { Modal, Vacio, IconoMas, IconoFlecha, SkeletonTarjetas } from '../components/ui'
 import IlustracionTarea from '../components/IlustracionTarea'
 import useProyectosConItems from '../hooks/useProyectosConItems'
 import { pasosParaMi } from '../data/proyectos'
@@ -426,6 +426,16 @@ function PasosProyectos({ hogarId, uid }) {
   const { t, idioma } = useIdioma()
   const { proyectos, itemsPorProyecto } = useProyectosConItems(hogarId)
   const [haciendo, setHaciendo] = useState(null)
+  // Plegado por defecto; cada dispositivo recuerda si lo dejaste abierto.
+  const [abierto, setAbierto] = useState(() => {
+    try { return localStorage.getItem('tareas.proyectosAbierto') === '1' } catch { return false }
+  })
+  function alternar() {
+    setAbierto((v) => {
+      try { localStorage.setItem('tareas.proyectosAbierto', v ? '0' : '1') } catch { /* sin localStorage */ }
+      return !v
+    })
+  }
   const pasos = useMemo(() => pasosParaMi(proyectos, itemsPorProyecto, uid).slice(0, 3), [proyectos, itemsPorProyecto, uid])
   if (!pasos.length) return null
 
@@ -441,20 +451,32 @@ function PasosProyectos({ hogarId, uid }) {
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg text-bosque">{t('pr.siguienteEnProyectos')}</h2>
-      <div className="space-y-2">
+    // Versión compacta y desplegable: una sola tarjeta con filas finas.
+    <section className="tarjeta px-3 py-1.5">
+      <button
+        onClick={alternar}
+        aria-expanded={abierto}
+        className="flex min-h-[2.75rem] w-full items-center gap-2 px-1 text-left"
+      >
+        <span className="flex-1 text-sm font-semibold text-oliva-oscuro">
+          {t('pr.siguienteEnProyectos')}
+          <span className="ml-1.5 rounded-md bg-dorado px-1.5 py-0.5 text-xs font-bold text-contorno">{pasos.length}</span>
+        </span>
+        <IconoFlecha dir={abierto ? 'up' : 'down'} className="h-5 w-5 text-oliva-oscuro" />
+      </button>
+      {abierto && (
+      <ul className="divide-y divide-borde pb-1">
         {pasos.map(({ proyecto, item, cuando: ms }) => {
           const c = cuando(ms)
           const saliendo = haciendo === item.id
           return (
-            <div key={item.id} className={`tarjeta flex items-center gap-3 py-3 ${saliendo ? 'salida-completado' : ''}`}>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: '#FBEFC8' }}>
+            <li key={item.id} className={`flex items-center gap-2.5 py-1 ${saliendo ? 'salida-completado' : ''}`}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base" style={{ background: '#FBEFC8' }}>
                 {proyecto.icono || '📦'}
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-bosque">{item.nombre}</p>
-                <p className="truncate text-xs text-oliva-oscuro">
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="truncate text-sm font-semibold text-bosque">{item.nombre}</p>
+                <p className="truncate text-[11px] text-oliva-oscuro">
                   {proyecto.nombre}
                   {c && <span className="font-semibold" style={c.color ? { color: c.color } : undefined}> · {c.texto}</span>}
                   {Number(item.puntos) > 0 && !item.puntosDados && <span> · +{item.puntos} pts</span>}
@@ -466,16 +488,18 @@ function PasosProyectos({ hogarId, uid }) {
                   setTimeout(() => cambiarEstadoItemProyecto(hogarId, proyecto, item, 'hecho', uid).finally(() => setHaciendo(null)), 350)
                 }}
                 disabled={saliendo}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white"
-                style={{ background: '#1D4E5B' }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center"
                 aria-label={`${t('pr.marcarHecho')}: ${item.nombre}`}
               >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full text-white" style={{ background: '#1D4E5B' }}>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                </span>
               </button>
-            </div>
+            </li>
           )
         })}
-      </div>
+      </ul>
+      )}
     </section>
   )
 }
