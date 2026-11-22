@@ -115,10 +115,13 @@ export async function guardarTokenFcm(uid, token) {
   } catch {
     /* sin localStorage: solo se añade */
   }
-  if (anterior === token) return
-
+  // Aunque el token no haya cambiado se vuelve a añadir (arrayUnion no
+  // duplica): así, si alguien vacía `fcmTokens` a mano para limpiar, el
+  // dispositivo se re-apunta solo al abrir la app.
   const batch = writeBatch(db)
-  if (anterior) batch.update(refUsuario(uid), { fcmTokens: arrayRemove(anterior) })
+  if (anterior && anterior !== token) {
+    batch.update(refUsuario(uid), { fcmTokens: arrayRemove(anterior) })
+  }
   batch.update(refUsuario(uid), { fcmTokens: arrayUnion(token) })
   await batch.commit()
   try {
