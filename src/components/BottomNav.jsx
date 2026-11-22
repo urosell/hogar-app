@@ -4,9 +4,26 @@ import { useIdioma } from '../context/IdiomaContext'
 import { useApp } from '../context/AppContext'
 import { MODULOS } from '../data/modulos'
 
+function BotonNav({ activo, texto, onClick, icono }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={activo ? 'page' : undefined}
+      className={`flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors ${
+        activo ? 'text-oliva' : 'text-oliva-oscuro'
+      }`}
+    >
+      {icono}
+      <span className={`max-w-full truncate text-[11px] leading-none ${activo ? 'font-bold' : 'font-medium'}`}>{texto}</span>
+      <span className={`h-1.5 w-1.5 rounded-full ${activo ? 'bg-dorado' : 'bg-transparent'}`} aria-hidden="true" />
+    </button>
+  )
+}
+
 // La barra la configura cada usuario en Ajustes (ver src/data/modulos.js):
-// hasta 4 secciones "principales" + un botón "⋯" con el resto. El "⋯" se pinta
-// en dorado con el icono de la sección cuando estás en una de las secundarias.
+// hasta 4 secciones "principales" + un botón "⋯" con el resto. El "⋯" se marca
+// como activo, con el icono y el nombre de la sección, cuando estás en una de
+// las secundarias.
 export default function BottomNav({ activo, onCambiar }) {
   const { t } = useIdioma()
   const { modulos } = useApp()
@@ -17,52 +34,33 @@ export default function BottomNav({ activo, onCambiar }) {
 
   return (
     <>
+      {/* Barra pegada abajo a todo el ancho, esquinas de arriba redondeadas:
+          icono + nombre; la activa en petróleo (mostaza de noche) con un
+          puntito mostaza debajo. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
-        style={{ paddingBottom: 'calc(0.5rem + var(--safe-bottom))' }}
+        className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] bg-crema-claro lg:hidden"
+        style={{ paddingBottom: 'var(--safe-bottom)', boxShadow: '0 -6px 24px rgba(23, 50, 58, 0.08)' }}
       >
-        <div
-          className="mx-auto flex max-w-md items-center justify-around rounded-[28px] bg-crema-claro px-3 py-1.5 shadow-tarjeta"
-        >
-          {principales.map((id) => {
-            const esActivo = activo === id
-            // Tareas manda visualmente cuando está en la barra (icono grande).
-            const grande = id === 'tareas'
-            return (
-              <button
-                key={id}
-                onClick={() => onCambiar(id)}
-                aria-label={t(clave(id))}
-                aria-current={esActivo ? 'page' : undefined}
-                className="flex flex-1 cursor-pointer items-center justify-center"
-              >
-                <span
-                  className={`flex items-center justify-center rounded-full transition-all duration-200 ${
-                    grande ? 'h-14 w-14' : 'h-12 w-12'
-                  } ${esActivo ? 'bg-dorado text-contorno' : 'bg-transparent text-oliva-oscuro'}`}
-                >
-                  <IconoModulo id={id} className={grande ? 'h-8 w-8' : 'h-6 w-6'} />
-                </span>
-              </button>
-            )
-          })}
+        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pt-2 pb-1.5">
+          {principales.map((id) => (
+            <BotonNav
+              key={id}
+              activo={activo === id}
+              texto={t(clave(id))}
+              onClick={() => onCambiar(id)}
+              icono={<IconoModulo id={id} className="h-6 w-6" />}
+            />
+          ))}
 
-          {/* Resto de secciones (solo si queda alguna fuera de la barra) */}
+          {/* Resto de secciones (solo si queda alguna fuera de la barra).
+              Si estás en una de ellas, el botón toma su icono y su nombre. */}
           {secundarias.length > 0 && (
-            <button
+            <BotonNav
+              activo={enSecundaria}
+              texto={enSecundaria ? t(clave(activo)) : t('nav.mas')}
               onClick={() => setHoja(true)}
-              aria-label={t('nav.mas')}
-              aria-current={enSecundaria ? 'page' : undefined}
-              className="flex flex-1 cursor-pointer items-center justify-center"
-            >
-              <span
-                className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 ${
-                  enSecundaria ? 'bg-dorado text-contorno' : 'bg-transparent text-oliva-oscuro'
-                }`}
-              >
-                {enSecundaria ? <IconoModulo id={activo} className="h-6 w-6" /> : <IconoPuntos className="h-6 w-6" />}
-              </span>
-            </button>
+              icono={enSecundaria ? <IconoModulo id={activo} className="h-6 w-6" /> : <IconoPuntos className="h-6 w-6" />}
+            />
           )}
         </div>
       </nav>
