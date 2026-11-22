@@ -29,14 +29,16 @@ export default {
           claro: 'rgb(var(--marron-claro) / <alpha-value>)',
           oscuro: 'rgb(var(--marron-oscuro) / <alpha-value>)',
         },
-        // Estilo cartoon/sticker: acento dorado y color de contorno.
+        // Acento mostaza; `contorno` es el texto oscuro que va sobre la mostaza
+        // y `borde` las líneas suaves de separación.
         dorado: 'rgb(var(--dorado) / <alpha-value>)',
         contorno: 'rgb(var(--contorno) / <alpha-value>)',
+        borde: 'rgb(var(--borde) / <alpha-value>)',
       },
       fontFamily: {
-        // Nunito para texto, Baloo 2 (redonda y gordita) para títulos. Se cargan en index.html.
-        sans: ['Nunito', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'system-ui', 'sans-serif'],
-        display: ['"Baloo 2"', 'Nunito', 'system-ui', 'sans-serif'],
+        // Poppins para todo (estilo ilustrado plano). Se carga en index.html.
+        sans: ['Poppins', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'system-ui', 'sans-serif'],
+        display: ['Poppins', 'system-ui', 'sans-serif'],
       },
       // Escala de tamaños reducida ~1px respecto al default de Tailwind
       // (texto un poco más pequeño, sin tocar el espaciado/layout).

@@ -8,55 +8,59 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-    /* ── Tema NOCHE (desierto de noche) — por defecto ──
+    /* ── Tema NOCHE (petróleo profundo) — por defecto ──
        Valores en canales RGB separados por espacios (para rgb(var(--x)/a)).
-       Estilo "cartoon/sticker": contornos gruesos + sombras duras desplazadas. */
-    --crema: 42 41 24; /* #2A2918 fondo oliva profundo */
-    --crema-claro: 58 59 35; /* #3A3B23 tarjetas */
-    --crema-oscuro: 76 77 46; /* #4C4D2E bordes/2º */
-    --salvia: 148 179 98; /* #94B362 verde éxito */
-    --salvia-claro: 58 71 40; /* #3A4728 tinte verde */
-    --salvia-oscuro: 168 163 118; /* #A8A376 atenuado */
-    --oliva: 233 185 73; /* #E9B949 dorado primario */
-    --oliva-claro: 240 201 106; /* #F0C96A */
-    --oliva-oscuro: 193 187 137; /* #C1BB89 texto atenuado */
-    --bosque: 244 234 194; /* #F4EAC2 texto principal crema */
-    --marron: 226 122 90; /* #E27A5A terracota */
-    --marron-claro: 238 156 130; /* #EE9C82 */
-    --marron-oscuro: 199 96 66; /* #C76042 */
-    --dorado: 233 185 73; /* #E9B949 acento dorado */
-    --contorno: 22 24 12; /* #16180C contorno de tarjetas/botones */
-    /* Degradado del fondo (arriba → abajo) */
-    --fondo-a: 30 39 24; /* #1E2718 verde noche */
-    --fondo-b: 42 41 24; /* #2A2918 oliva profundo */
-    /* Sombras duras (estilo sticker): bloque desplazado hacia abajo. */
-    --shadow-suave: 0 3px 0 rgba(10, 12, 5, 0.9);
-    --shadow-tarjeta: 0 5px 0 rgba(10, 12, 5, 0.9), 0 14px 28px rgba(0, 0, 0, 0.35);
+       Estilo "ilustrado plano": sin contornos, esquinas redondas, sombras
+       suaves; petróleo + mostaza + terracota. Los NOMBRES de los tokens son
+       los de siempre (crema, oliva…) para no tocar cada componente: lo que
+       cuenta es su papel (fondo, tarjeta, primario, texto…), no el color. */
+    --crema: 15 42 49; /* #0F2A31 fondo petróleo muy oscuro */
+    --crema-claro: 23 54 63; /* #17363F tarjetas */
+    --crema-oscuro: 34 69 79; /* #22454F 2º plano / pastillas */
+    --salvia: 95 194 166; /* #5FC2A6 verde éxito */
+    --salvia-claro: 29 74 71; /* #1D4A47 tinte verde */
+    --salvia-oscuro: 143 167 173; /* #8FA7AD atenuado */
+    --oliva: 242 193 78; /* #F2C14E mostaza: primario de noche */
+    --oliva-claro: 246 210 126; /* #F6D27E */
+    --oliva-oscuro: 169 195 202; /* #A9C3CA texto atenuado */
+    --bosque: 243 238 228; /* #F3EEE4 texto principal */
+    --marron: 229 156 126; /* #E59C7E terracota */
+    --marron-claro: 239 181 157; /* #EFB59D */
+    --marron-oscuro: 201 119 90; /* #C9775A */
+    --dorado: 242 193 78; /* #F2C14E acento mostaza */
+    --contorno: 16 37 43; /* #10252B texto oscuro sobre mostaza */
+    --borde: 46 85 96; /* #2E5560 líneas suaves */
+    /* Fondo liso (antes era un degradado). */
+    --fondo-a: 15 42 49;
+    --fondo-b: 15 42 49;
+    --shadow-suave: 0 2px 8px rgba(0, 0, 0, 0.18);
+    --shadow-tarjeta: 0 8px 24px rgba(0, 0, 0, 0.28);
     --skeleton-shimmer: rgba(255, 255, 255, 0.07);
   }
 
-  /* ── Tema DÍA (desierto al sol) ── */
+  /* ── Tema DÍA (crema + petróleo) ── */
   :root[data-theme='day'] {
-    --crema: 247 240 218; /* #F7F0DA arena clara */
-    --crema-claro: 255 253 246; /* #FFFDF6 tarjetas casi blancas */
-    --crema-oscuro: 236 226 196; /* #ECE2C4 bordes/2º */
-    --salvia: 106 140 60; /* #6A8C3C verde éxito */
-    --salvia-claro: 227 236 195; /* #E3ECC3 tinte verde claro */
-    --salvia-oscuro: 122 116 66; /* #7A7442 atenuado */
-    --oliva: 84 95 38; /* #545F26 oliva oscuro primario */
-    --oliva-claro: 111 124 52; /* #6F7C34 */
-    --oliva-oscuro: 99 95 44; /* #635F2C texto atenuado fuerte */
-    --bosque: 61 66 26; /* #3D421A texto principal oliva */
-    --marron: 191 84 51; /* #BF5433 terracota */
-    --marron-claro: 224 129 100; /* #E08164 */
-    --marron-oscuro: 158 65 38; /* #9E4126 */
-    --dorado: 240 178 55; /* #F0B237 acento dorado */
-    --contorno: 68 74 30; /* #444A1E contorno oliva oscuro */
-    --fondo-a: 202 223 188; /* #CADFBC verde suave claro arriba */
-    --fondo-b: 247 240 218; /* #F7F0DA arena clara abajo */
-    --shadow-suave: 0 3px 0 rgba(68, 74, 30, 0.85);
-    --shadow-tarjeta: 0 5px 0 rgba(68, 74, 30, 0.85), 0 14px 26px rgba(68, 74, 30, 0.14);
-    --skeleton-shimmer: rgba(255, 255, 255, 0.55);
+    --crema: 251 247 240; /* #FBF7F0 fondo crema */
+    --crema-claro: 255 255 255; /* #FFFFFF tarjetas */
+    --crema-oscuro: 241 234 223; /* #F1EADF 2º plano / pastillas */
+    --salvia: 47 125 109; /* #2F7D6D verde éxito */
+    --salvia-claro: 220 232 236; /* #DCE8EC tinte azulado claro */
+    --salvia-oscuro: 111 127 132; /* #6F7F84 atenuado */
+    --oliva: 29 78 91; /* #1D4E5B petróleo primario */
+    --oliva-claro: 46 101 117; /* #2E6575 */
+    --oliva-oscuro: 91 107 112; /* #5B6B70 texto atenuado */
+    --bosque: 23 50 58; /* #17323A texto principal */
+    --marron: 180 96 63; /* #B4603F terracota */
+    --marron-claro: 229 156 126; /* #E59C7E */
+    --marron-oscuro: 154 77 50; /* #9A4D32 */
+    --dorado: 242 193 78; /* #F2C14E acento mostaza */
+    --contorno: 23 50 58; /* #17323A texto oscuro sobre mostaza */
+    --borde: 230 222 208; /* #E6DED0 líneas suaves */
+    --fondo-a: 251 247 240;
+    --fondo-b: 251 247 240;
+    --shadow-suave: 0 2px 8px rgba(23, 50, 58, 0.06);
+    --shadow-tarjeta: 0 8px 24px rgba(23, 50, 58, 0.08);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.6);
   }
 
   html,
@@ -65,7 +69,7 @@
     height: 100%;
   }
 
-  /* Tipografía: Nunito en cuerpo (font-sans), Baloo 2 en títulos (font-display). */
+  /* Tipografía: Poppins en cuerpo (font-sans) y en títulos (font-display, más gruesa). */
   body {
     @apply bg-crema text-bosque font-sans antialiased;
     overscroll-behavior-y: none;
@@ -89,7 +93,7 @@
   h1,
   h2,
   h3 {
-    @apply font-display;
+    @apply font-display font-bold;
   }
 
   /* Evita el zoom al hacer focus en inputs en iOS */
@@ -101,32 +105,30 @@
 }
 
 @layer components {
-  /* Botones estilo sticker: contorno grueso + sombra dura que se "hunde" al pulsar. */
+  /* Botones planos: esquinas redondeadas, sin contorno; se encogen un poco al pulsar. */
   .btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3 font-bold
-      transition-all duration-150 disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold
+      transition-all duration-150 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primario {
-    @apply btn border-2 border-contorno bg-oliva text-crema-claro shadow-suave
-      active:translate-y-[3px] active:shadow-none disabled:active:translate-y-0 disabled:active:shadow-suave;
+    @apply btn bg-oliva text-crema-claro shadow-suave;
   }
   .btn-secundario {
-    @apply btn border-2 border-contorno/60 bg-crema-oscuro text-bosque shadow-suave
-      active:translate-y-[3px] active:shadow-none hover:bg-salvia-claro;
+    @apply btn bg-crema-oscuro text-bosque hover:bg-salvia-claro;
   }
   .btn-fantasma {
-    @apply btn bg-transparent text-oliva hover:bg-crema-oscuro active:scale-[0.97];
+    @apply btn bg-transparent text-oliva hover:bg-crema-oscuro;
   }
-  /* Tarjeta sticker: contorno + sombra dura desplazada. */
+  /* Tarjeta plana: sin contorno, sombra suave. */
   .tarjeta {
-    @apply rounded-xl2 border-2 border-contorno bg-crema-claro p-4 shadow-suave;
+    @apply rounded-xl2 bg-crema-claro p-4 shadow-tarjeta;
   }
   .input {
-    @apply w-full rounded-2xl border-2 border-contorno/50 bg-crema-claro px-4 py-3 text-bosque
+    @apply w-full rounded-2xl border border-borde bg-crema-claro px-4 py-3 text-bosque
       placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-2 focus:ring-oliva/30;
   }
   .etiqueta {
-    @apply mb-1.5 block text-sm font-bold text-oliva-oscuro;
+    @apply mb-1.5 block text-sm font-semibold text-oliva-oscuro;
   }
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold;

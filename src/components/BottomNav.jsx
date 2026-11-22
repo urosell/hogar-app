@@ -18,12 +18,11 @@ export default function BottomNav({ activo, onCambiar }) {
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 px-3"
+        className="fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
         style={{ paddingBottom: 'calc(0.5rem + var(--safe-bottom))' }}
       >
         <div
-          className="mx-auto flex max-w-md items-center justify-around rounded-[28px] bg-contorno px-3 py-1.5"
-          style={{ boxShadow: '0 4px 0 rgba(0, 0, 0, 0.28), 0 12px 24px rgba(0, 0, 0, 0.25)' }}
+          className="mx-auto flex max-w-md items-center justify-around rounded-[28px] bg-crema-claro px-3 py-1.5 shadow-tarjeta"
         >
           {principales.map((id) => {
             const esActivo = activo === id
@@ -40,7 +39,7 @@ export default function BottomNav({ activo, onCambiar }) {
                 <span
                   className={`flex items-center justify-center rounded-full transition-all duration-200 ${
                     grande ? 'h-14 w-14' : 'h-12 w-12'
-                  } ${esActivo ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'}`}
+                  } ${esActivo ? 'bg-dorado text-contorno' : 'bg-transparent text-oliva-oscuro'}`}
                 >
                   <IconoModulo id={id} className={grande ? 'h-8 w-8' : 'h-6 w-6'} />
                 </span>
@@ -58,7 +57,7 @@ export default function BottomNav({ activo, onCambiar }) {
             >
               <span
                 className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 ${
-                  enSecundaria ? 'bg-dorado text-contorno' : 'bg-transparent text-[#F4EAC2]/70'
+                  enSecundaria ? 'bg-dorado text-contorno' : 'bg-transparent text-oliva-oscuro'
                 }`}
               >
                 {enSecundaria ? <IconoModulo id={activo} className="h-6 w-6" /> : <IconoPuntos className="h-6 w-6" />}
@@ -77,7 +76,7 @@ export default function BottomNav({ activo, onCambiar }) {
                 key={id}
                 onClick={() => { onCambiar(id); setHoja(false) }}
                 className={`flex flex-col items-center gap-1.5 rounded-xl2 border-2 py-3 transition-colors ${
-                  esActivo ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/20 bg-crema-claro text-oliva-oscuro'
+                  esActivo ? 'border-borde bg-oliva text-crema-claro' : 'border-borde/20 bg-crema-claro text-oliva-oscuro'
                 }`}
               >
                 <IconoModulo id={id} className="h-7 w-7" />

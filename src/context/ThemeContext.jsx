@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const ThemeContext = createContext({ theme: 'night', toggle: () => {}, setTheme: () => {} })
 
 // Color de la barra del navegador/estado por tema.
-const META_COLOR = { night: '#1E2718', day: '#CADFBC' }
+const META_COLOR = { night: '#0F2A31', day: '#FBF7F0' }
 
 function aplicarTema(theme) {
   const root = document.documentElement

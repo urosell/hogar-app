@@ -136,7 +136,7 @@ export default function Ajustes({ abierto, onCerrar }) {
       <div>
         {/* Perfil y hogar viven fuera del acordeón: el nombre y el código de
             invitación son lo que más se consulta y no deben esconderse. */}
-        <div className="border-b border-contorno/15 pb-4">
+        <div className="border-b border-borde/15 pb-4">
           <div className="flex items-center gap-3">
             <button onClick={() => setEditandoAvatar((v) => !v)} className="active:scale-95">
               <Avatar icono={icono} nombre={nombre} size="lg" />
@@ -146,7 +146,7 @@ export default function Ajustes({ abierto, onCerrar }) {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               onBlur={guardarNombre}
-              className="flex-1 border-0 border-b-2 border-contorno/20 bg-transparent px-0 py-2 text-lg font-bold text-bosque placeholder:font-normal placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-0"
+              className="flex-1 border-0 border-b-2 border-borde/20 bg-transparent px-0 py-2 text-lg font-bold text-bosque placeholder:font-normal placeholder:text-salvia-oscuro/60 focus:border-oliva focus:outline-none focus:ring-0"
               maxLength={20}
               placeholder={t('aj.tuNombre')}
             />
@@ -238,7 +238,7 @@ export default function Ajustes({ abierto, onCerrar }) {
         >
           {/* Sangrado + guía a la izquierda para que se vea que cuelgan de
               «Configuración». La última no lleva línea abajo: ya la pone ella. */}
-          <div className="border-l-2 border-contorno/15 pl-3 [&>section:last-child]:border-b-0">
+          <div className="border-l-2 border-borde/15 pl-3 [&>section:last-child]:border-b-0">
           {/* Módulos: qué secciones uso y cuáles van en la barra de abajo.
               Es una preferencia personal, no del hogar. */}
           <Desplegable
@@ -292,7 +292,7 @@ export default function Ajustes({ abierto, onCerrar }) {
                   (!principal && barraLlena) ||
                   (principal && modulos.principales.length === 1)
                 return (
-                  <div key={m.id} className={`flex items-center justify-between border-b border-contorno/10 py-2.5 last:border-0 ${encendido ? '' : 'opacity-50'}`}>
+                  <div key={m.id} className={`flex items-center justify-between border-b border-borde/10 py-2.5 last:border-0 ${encendido ? '' : 'opacity-50'}`}>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-bosque">{t(m.nav)}</p>
                       <p className="truncate text-xs text-oliva-oscuro/60">{t(m.desc)}</p>
@@ -336,7 +336,7 @@ export default function Ajustes({ abierto, onCerrar }) {
 
             <div>
               {TIPOS.map((tipo) => (
-                <div key={tipo.clave} className="flex items-center justify-between border-b border-contorno/10 py-2.5 last:border-0">
+                <div key={tipo.clave} className="flex items-center justify-between border-b border-borde/10 py-2.5 last:border-0">
                   <div>
                     <p className="text-sm font-bold text-bosque">{t(tipo.labelKey)}</p>
                     <p className="text-xs text-oliva-oscuro/60">{t(tipo.descKey)}</p>

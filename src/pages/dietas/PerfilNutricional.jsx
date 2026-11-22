@@ -73,8 +73,8 @@ export default function PerfilNutricional() {
             onClick={() => guardar({ ...p, [valor]: id })}
             className={`chip border-2 px-3 py-1.5 ${
               p[valor] === id
-                ? 'border-contorno bg-oliva text-crema-claro'
-                : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
+                ? 'border-borde bg-oliva text-crema-claro'
+                : 'border-borde/30 bg-crema-claro text-oliva-oscuro'
             }`}
           >
             {label}
@@ -124,7 +124,7 @@ export default function PerfilNutricional() {
       />
 
       {listo ? (
-        <div className="rounded-2xl border-2 border-contorno/20 bg-salvia-claro/40 p-3">
+        <div className="rounded-2xl border-2 border-borde/20 bg-salvia-claro/40 p-3">
           <p className="text-center text-2xl font-bold text-bosque">
             {macros.kcal} <span className="text-base font-bold text-oliva-oscuro/70">kcal/{t('nut.dia')}</span>
           </p>

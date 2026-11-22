@@ -114,7 +114,7 @@ export default function Marketplace() {
         ) : catalogo.length === 0 ? (
           <Vacio emoji="🎁" titulo={t('mk.vacioCatalogoTitulo')} texto={t('mk.vacioCatalogoTexto')} />
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {catalogo.map((r) => (
               <RecompensaCard
                 key={r.id}
@@ -139,7 +139,7 @@ export default function Marketplace() {
               {pendientes.length === 0 ? (
                 <Vacio emoji="⏳" titulo={t('mk.vacioPendientes')} />
               ) : (
-                <div className="space-y-3">
+                <div className="grid gap-3 lg:grid-cols-2">
                   {pendientes.map((c) => (
                     <CanjeCard key={c.id} canje={c} quien={porUid[c.canjeadoPor]} esMio={c.canjeadoPor === uid} onCumplir={() => marcarCanjeCumplido(hogarId, c.id)} />
                   ))}
@@ -163,7 +163,7 @@ export default function Marketplace() {
       {/* Botón flotante crear */}
       <button
         onClick={() => setModalAbierto(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('mk.nuevaRecompensaAria')}
       >

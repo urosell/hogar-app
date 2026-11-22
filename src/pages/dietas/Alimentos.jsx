@@ -34,14 +34,14 @@ export default function Alimentos({ alimentos, cargado }) {
       ) : (
         <>
           <p className="text-xs text-oliva-oscuro/50">{t('dietas.nAlimentos', { n: filtrados.length })}</p>
-          <div className="space-y-1.5">
+          <div className="grid gap-1.5 lg:grid-cols-2 xl:grid-cols-3">
             {filtrados.map((a) => {
               const info = infoCategoria(a.categoria)
               return (
                 <button
                   key={a.id}
                   onClick={() => setEditando(a)}
-                  className="flex w-full items-center gap-2 rounded-2xl border-2 border-contorno/20 bg-crema-claro px-3 py-2 text-left shadow-suave"
+                  className="flex w-full items-center gap-2 rounded-2xl border-2 border-borde/20 bg-crema-claro px-3 py-2 text-left shadow-suave"
                 >
                   <span className="text-lg">{info.emoji}</span>
                   <div className="min-w-0 flex-1">
@@ -62,7 +62,7 @@ export default function Alimentos({ alimentos, cargado }) {
 
       <button
         onClick={() => setAnadiendo(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border-2 border-contorno bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full border-2 border-borde bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('dietas.nuevoAlimento')}
       >
@@ -110,7 +110,7 @@ export default function Alimentos({ alimentos, cargado }) {
           <button onClick={() => setConfirmarBorrar(null)} className="btn-secundario flex-1">{t('common.cancelar')}</button>
           <button
             onClick={async () => { await eliminarAlimento(hogarId, confirmarBorrar.id); setConfirmarBorrar(null) }}
-            className="btn flex-1 border-2 border-contorno bg-marron text-crema-claro"
+            className="btn flex-1 border-2 border-borde bg-marron text-crema-claro"
           >
             {t('common.eliminar')}
           </button>

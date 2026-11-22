@@ -124,7 +124,7 @@ export default function Proyectos() {
       ) : proyectos.length === 0 ? (
         <Vacio emoji="📦" titulo={t('pr.vacioProyectosTitulo')} texto={t('pr.vacioProyectosTexto')} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {proyectos.map((p) => (
             <ProyectoCard key={p.id} proyecto={p} hogarId={hogarId} onAbrir={() => setAbiertoId(p.id)} />
           ))}
@@ -134,7 +134,7 @@ export default function Proyectos() {
       {/* Botón flotante crear */}
       <button
         onClick={() => setModalAbierto(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('pr.nuevoProyectoAria')}
       >
@@ -295,7 +295,7 @@ function ProyectoDetalle({ proyecto, onVolver, onEditar, onEliminar, modalProyec
       {/* Botón flotante añadir item */}
       <button
         onClick={() => setModalItem(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('pr.nuevoItemAria')}
       >

@@ -27,7 +27,8 @@ export default function Recetas({ recetas, alimentos, alimentosPorId, cargado })
       ) : recetas.length === 0 ? (
         <Vacio emoji="🍲" titulo={t('dietas.sinRecetasTitulo')} texto={t('dietas.sinRecetasTexto')} />
       ) : (
-        recetas.map((r) => (
+        <div className="grid gap-3 lg:grid-cols-2">
+        {recetas.map((r) => (
           <button key={r.id} onClick={() => setDetalle(r)} className="tarjeta flex w-full items-center gap-3 text-left">
             <span className="text-3xl">{r.emoji || '🍽️'}</span>
             <div className="min-w-0 flex-1">
@@ -51,12 +52,13 @@ export default function Recetas({ recetas, alimentos, alimentosPorId, cargado })
               </span>
             )}
           </button>
-        ))
+        ))}
+        </div>
       )}
 
       <button
         onClick={() => setEditando({})}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border-2 border-contorno bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full border-2 border-borde bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('dietas.nuevaReceta')}
       >
@@ -96,7 +98,7 @@ export default function Recetas({ recetas, alimentos, alimentosPorId, cargado })
           <button onClick={() => setConfirmarBorrar(null)} className="btn-secundario flex-1">{t('common.cancelar')}</button>
           <button
             onClick={async () => { await eliminarReceta(hogarId, confirmarBorrar.id); setConfirmarBorrar(null) }}
-            className="btn flex-1 border-2 border-contorno bg-marron text-crema-claro"
+            className="btn flex-1 border-2 border-borde bg-marron text-crema-claro"
           >
             {t('common.eliminar')}
           </button>
@@ -235,7 +237,7 @@ function EditorReceta({ receta, alimentos, alimentosPorId, onCerrar, onGuardar }
                       const v = Number(String(e.target.value).replace(',', '.')) || 0
                       setIngredientes((prev) => prev.map((x, k) => (k === idx ? { ...x, cantidad: v } : x)))
                     }}
-                    className="w-16 rounded-xl border-2 border-contorno/40 bg-crema-claro px-2 py-1 text-right text-sm text-bosque focus:border-oliva focus:outline-none"
+                    className="w-16 rounded-xl border-2 border-borde/40 bg-crema-claro px-2 py-1 text-right text-sm text-bosque focus:border-oliva focus:outline-none"
                   />
                   <span className="w-6 text-xs font-bold text-oliva-oscuro/70">{i.unidad}</span>
                   <button
@@ -277,8 +279,8 @@ function EditorReceta({ receta, alimentos, alimentosPorId, onCerrar, onGuardar }
                   }
                   className={`chip border-2 px-3 py-1.5 ${
                     activo
-                      ? 'border-contorno bg-oliva text-crema-claro'
-                      : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
+                      ? 'border-borde bg-oliva text-crema-claro'
+                      : 'border-borde/30 bg-crema-claro text-oliva-oscuro'
                   }`}
                 >
                   {EMOJI_COMIDA[c]} {t('dietas.comida.' + c)}

@@ -148,15 +148,19 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
             <Vacio emoji="🧹" titulo={t('tareas.vacioActivasTitulo')} texto={t('tareas.vacioActivasTexto')} />
           ) : (
             <>
-              {paraHacer.map((tar) => (
-                <TareaCard key={tar.id} tarea={tar} porUid={porUid} onCompletar={() => pedirCompletar(tar)} onAbrir={() => setDetalleTarea(tar)} saliendo={completando === tar.id} />
-              ))}
+              <div className="lg:grid lg:grid-cols-2 lg:gap-x-4">
+                {paraHacer.map((tar) => (
+                  <TareaCard key={tar.id} tarea={tar} porUid={porUid} onCompletar={() => pedirCompletar(tar)} onAbrir={() => setDetalleTarea(tar)} saliendo={completando === tar.id} />
+                ))}
+              </div>
               {descansando.length > 0 && (
                 <div className="pt-2">
                   <h3 className="mb-2 text-sm font-bold text-oliva-oscuro">{t('tareas.descansando')}</h3>
-                  {descansando.map((tar) => (
-                    <TareaCard key={tar.id} tarea={tar} porUid={porUid} onAbrir={() => setDetalleTarea(tar)} descansando />
-                  ))}
+                  <div className="lg:grid lg:grid-cols-2 lg:gap-x-4">
+                    {descansando.map((tar) => (
+                      <TareaCard key={tar.id} tarea={tar} porUid={porUid} onAbrir={() => setDetalleTarea(tar)} descansando />
+                    ))}
+                  </div>
                 </div>
               )}
             </>
@@ -176,7 +180,8 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
           ) : pendientes.length === 0 ? (
             <Vacio emoji="📝" titulo={t('tareas.vacioAprobar')} />
           ) : (
-            pendientes.map((tar) => (
+            <div className="lg:grid lg:grid-cols-2 lg:gap-x-4">
+            {pendientes.map((tar) => (
               <TareaPendiente
                 key={tar.id}
                 tarea={tar}
@@ -188,7 +193,8 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
                 onAprobar={() => handleAprobar(tar)}
                 onRechazar={() => handleRechazar(tar)}
               />
-            ))
+            ))}
+            </div>
           )}
         </>
       )}
@@ -196,7 +202,7 @@ export default function Tareas({ seccion, setSeccion, onPendientes }) {
       {/* Botón flotante crear */}
       <button
         onClick={() => setModalAbierto(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('tareas.nuevaTareaAria')}
       >

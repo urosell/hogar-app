@@ -16,9 +16,9 @@ import { Modal, Vacio, IconoMas, IconoFlecha, IconoGym } from '../components/ui'
 import { useIdioma } from '../context/IdiomaContext'
 
 // Colores de las fuentes (inline para que sean distinguibles en ambos temas).
-const COLOR_PROYECTO = '#C85A3A' // terracota
-const COLOR_GYM = '#4A7C9E' // azul desierto
-const COLOR_PAREJA = '#8FB350' // verde oliva claro (eventos compartidos)
+const COLOR_PROYECTO = '#C9775A' // terracota
+const COLOR_GYM = '#F2C14E' // mostaza
+const COLOR_PAREJA = '#3E8FA3' // petróleo claro (eventos compartidos)
 // Color por persona, asignado por el orden estable de uids del hogar.
 // Un color por miembro (hasta 4): violeta, ámbar, teal, rosa.
 const COLORES_PERSONA = ['#9B7ED9', '#E8A33D', '#5AA9A0', '#D96A8B']
@@ -227,7 +227,9 @@ export default function Calendario() {
   }, [seleccion, idioma, hoyClave, t])
 
   return (
-    <div className="space-y-4">
+    // En el PC el mes y la agenda del día van uno al lado del otro.
+    <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-4">
       {/* Cabecera de mes */}
       <div className="flex items-center justify-between">
         <button onClick={() => cambiarMes(-1)} className="flex h-10 w-10 items-center justify-center rounded-full text-oliva-oscuro hover:bg-crema-oscuro" aria-label={t('cal.mesAnteriorAria')}>
@@ -284,8 +286,10 @@ export default function Calendario() {
         </div>
       </div>
 
+      </div>
+
       {/* Agenda del día seleccionado */}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 lg:pt-1.5">
         <h3 className="text-sm font-bold capitalize text-oliva-oscuro">{tituloDiaSel}</h3>
         {!haySel ? (
           <Vacio emoji="📅" titulo={t('cal.sinEventosDia')} />
@@ -345,7 +349,7 @@ export default function Calendario() {
       {/* Botón flotante: nuevo evento */}
       <button
         onClick={() => setModalEvento(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('cal.nuevoEventoAria')}
       >

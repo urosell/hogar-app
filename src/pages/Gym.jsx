@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 
 // Un color por miembro (hasta 4): verde oliva, oro, azul, terracota.
-const COLORES = ['#6A8C3C', '#F0B237', '#4A7C9E', '#C85A3A']
+const COLORES = ['#3E8FA3', '#F2C14E', '#C9775A', '#8FB1C9']
 
 // "2026-06-12" → "12 de junio de 2026" (según idioma, vía t)
 function fechaBonita(idioma, t, clave) {
@@ -30,8 +30,8 @@ function inicioSemana(d) {
 
 // Colores del gráfico según el tema (Recharts requiere valores explícitos).
 const GRAFICO = {
-  night: { grid: '#4C4D2E', tick: '#C1BB89', tipBg: '#3A3B23', tipText: '#F4EAC2', tipBorder: '#16180C' },
-  day: { grid: '#E6D18F', tick: '#635F2C', tipBg: '#FBF3D0', tipText: '#3D421A', tipBorder: '#444A1E' },
+  night: { grid: '#22454F', tick: '#A9C3CA', tipBg: '#17363F', tipText: '#F3EEE4', tipBorder: '#2E5560' },
+  day: { grid: '#F1EADF', tick: '#5B6B70', tipBg: '#FFFFFF', tipText: '#17323A', tipBorder: '#E6DED0' },
 }
 
 export default function Gym() {

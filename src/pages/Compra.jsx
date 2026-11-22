@@ -57,7 +57,7 @@ export default function Compra() {
         alt=""
         aria-hidden="true"
         draggable="false"
-        className="pointer-events-none fixed bottom-20 left-8 z-20 h-32 select-none"
+        className="pointer-events-none fixed bottom-20 left-8 z-20 lg:bottom-4 lg:left-72 h-32 select-none"
         style={{ marginBottom: 'var(--safe-bottom)', filter: theme === 'night' ? 'invert(1)' : 'none' }}
       />
       <img
@@ -65,7 +65,7 @@ export default function Compra() {
         alt=""
         aria-hidden="true"
         draggable="false"
-        className="pointer-events-none fixed bottom-20 left-28 z-20 h-32 select-none"
+        className="pointer-events-none fixed bottom-20 left-28 z-20 lg:bottom-4 lg:left-[22rem] h-32 select-none"
         style={{ marginBottom: 'var(--safe-bottom)', filter: theme === 'night' ? 'invert(1)' : 'none' }}
       />
     </>
@@ -94,7 +94,8 @@ function SelectorListas({ listas, cargado, onAbrir, hogarId }) {
       ) : listas.length === 0 ? (
         <Vacio emoji="🛒" titulo={t('compra.vaciaListasTitulo')} texto={t('compra.vaciaListasTexto')} />
       ) : (
-        listas.map((l) => (
+        <div className="grid gap-3 lg:grid-cols-2">
+        {listas.map((l) => (
           <div key={l.id} className="tarjeta flex items-center gap-3">
             <button onClick={() => onAbrir(l.id)} className="flex flex-1 items-center gap-3 text-left">
               <span className="text-2xl">📋</span>
@@ -104,12 +105,13 @@ function SelectorListas({ listas, cargado, onAbrir, hogarId }) {
               <IconoPapelera className="h-5 w-5" />
             </button>
           </div>
-        ))
+        ))}
+        </div>
       )}
 
       <button
         onClick={() => setModal(true)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('compra.nuevaLista')}
       >

@@ -146,7 +146,7 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
               key={clave}
               onClick={() => setDiaSel(clave)}
               className={`flex flex-1 flex-col items-center rounded-2xl border-2 py-1.5 transition-colors ${
-                sel ? 'border-contorno bg-oliva text-crema-claro' : 'border-transparent bg-crema-claro text-oliva-oscuro'
+                sel ? 'border-borde bg-oliva text-crema-claro' : 'border-transparent bg-crema-claro text-oliva-oscuro'
               }`}
             >
               <span className="text-[10px] font-bold opacity-70">{DIAS_SEMANA[idioma][i]}</span>
@@ -180,13 +180,13 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
           defecto genera la semana entera. */}
       <button
         onClick={() => setGenerando(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-contorno bg-dorado py-2 text-sm font-bold text-contorno"
+        className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-borde bg-dorado py-2 text-sm font-bold text-contorno"
       >
         <IconoCompra className="h-4 w-4" /> {t('dietas.generarCompra')}
       </button>
 
       {/* Comidas del día */}
-      <div className="space-y-2">
+      <div className="grid items-start gap-2 lg:grid-cols-2 xl:grid-cols-3">
         {COMIDAS.map((comida) => {
           const entradas = diaActual[comida] || []
           const mias = entradas.filter((e) => esPara(e, uid))
@@ -204,8 +204,8 @@ export default function MenuSemana({ recetas, recetasPorId, alimentos, alimentos
                       onClick={() => alternarComida(comida)}
                       className={`chip border-2 text-xs ${
                         todasMarcadas
-                          ? 'border-contorno bg-oliva text-crema-claro'
-                          : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'
+                          ? 'border-borde bg-oliva text-crema-claro'
+                          : 'border-borde/30 bg-crema-claro text-oliva-oscuro'
                       }`}
                       title={t(todasMarcadas ? 'dietas.desmarcarComida' : 'dietas.marcarComida')}
                     >
@@ -395,7 +395,7 @@ function EntradaFila({ entrada, miembros, esMia, confirmada, onConfirmar, onEdit
         <button
           onClick={onConfirmar}
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${
-            confirmada ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/40 bg-crema-claro text-transparent'
+            confirmada ? 'border-borde bg-oliva text-crema-claro' : 'border-borde/40 bg-crema-claro text-transparent'
           }`}
           aria-label={t('dietas.confirmarAria')}
           aria-pressed={confirmada}
@@ -585,7 +585,7 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
                       type="checkbox"
                       checked={soloDeEstaComida}
                       onChange={(e) => setSoloDeEstaComida(e.target.checked)}
-                      className="h-4 w-4 accent-[#6B7A4F]"
+                      className="h-4 w-4 accent-oliva"
                     />
                     {t('dietas.soloDeEstaComida', { comida: t('dietas.comida.' + comida) })}
                   </label>
@@ -681,7 +681,7 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
                         className={`chip border-2 px-3 py-1.5 ${
                           alimento.unidad === u
                             ? 'border-oliva bg-oliva text-crema-claro'
-                            : 'border-contorno/40 bg-crema-claro text-oliva-oscuro'
+                            : 'border-borde/40 bg-crema-claro text-oliva-oscuro'
                         }`}
                       >
                         {u}
@@ -715,7 +715,7 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setPara('hogar')}
-              className={`chip border-2 px-3 py-1.5 ${para === 'hogar' ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'}`}
+              className={`chip border-2 px-3 py-1.5 ${para === 'hogar' ? 'border-borde bg-oliva text-crema-claro' : 'border-borde/30 bg-crema-claro text-oliva-oscuro'}`}
             >
               🏠 {t('dietas.todoElHogar')}
             </button>
@@ -725,7 +725,7 @@ function ModalAnadirEntrada({ comida, entrada, recetas, alimentos, alimentosPorI
                 <button
                   key={m.id}
                   onClick={() => alternarPersona(m.id)}
-                  className={`chip border-2 px-3 py-1.5 ${activo ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'}`}
+                  className={`chip border-2 px-3 py-1.5 ${activo ? 'border-borde bg-oliva text-crema-claro' : 'border-borde/30 bg-crema-claro text-oliva-oscuro'}`}
                 >
                   {m.icono} {m.nombre}
                 </button>
@@ -894,7 +894,7 @@ function ModalGenerarCompra({ menu, claves, diaSel, recetasPorId, alimentosPorId
                 <button
                   key={l.id}
                   onClick={() => setListaId(l.id)}
-                  className={`chip border-2 px-3 py-1.5 ${listaId === l.id ? 'border-contorno bg-oliva text-crema-claro' : 'border-contorno/30 bg-crema-claro text-oliva-oscuro'}`}
+                  className={`chip border-2 px-3 py-1.5 ${listaId === l.id ? 'border-borde bg-oliva text-crema-claro' : 'border-borde/30 bg-crema-claro text-oliva-oscuro'}`}
                 >
                   📋 {l.nombre}
                 </button>
@@ -904,7 +904,7 @@ function ModalGenerarCompra({ menu, claves, diaSel, recetasPorId, alimentosPorId
         )}
 
         <label className="flex items-center gap-2 text-sm font-bold text-oliva-oscuro">
-          <input type="checkbox" checked={incluirLibres} onChange={(e) => setIncluirLibres(e.target.checked)} className="h-4 w-4 accent-[#6B7A4F]" />
+          <input type="checkbox" checked={incluirLibres} onChange={(e) => setIncluirLibres(e.target.checked)} className="h-4 w-4 accent-oliva" />
           {t('dietas.incluirLibres')}
         </label>
 
@@ -948,7 +948,7 @@ function ModalGenerarCompra({ menu, claves, diaSel, recetasPorId, alimentosPorId
                       checked={marcado}
                       readOnly
                       tabIndex={-1}
-                      className="pointer-events-none h-4 w-4 shrink-0 accent-[#6B7A4F]"
+                      className="pointer-events-none h-4 w-4 shrink-0 accent-oliva"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-bosque">{info.emoji} {i.nombre}</span>

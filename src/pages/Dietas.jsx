@@ -90,7 +90,7 @@ export default function Dietas({ activo }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 rounded-full border-2 border-contorno/20 bg-crema-oscuro/50 p-1">
+      <div className="flex gap-1 rounded-full border-2 border-borde/20 bg-crema-oscuro/50 p-1">
         {VISTAS.map(([id, label]) => (
           <button
             key={id}

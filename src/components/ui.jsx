@@ -68,7 +68,7 @@ export function Modal({ abierto, onCerrar, titulo, children, alto }) {
 // haber una abierta a la vez (acordeón) o varias.
 export function Desplegable({ titulo, resumen, abierto, onToggle, children }) {
   return (
-    <section className="border-b border-contorno/15">
+    <section className="border-b border-borde/15">
       <button
         type="button"
         onClick={onToggle}

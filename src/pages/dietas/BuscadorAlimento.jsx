@@ -143,7 +143,7 @@ export default function BuscadorAlimento({
                     type="button"
                     onClick={() => setUnidad(u)}
                     className={`chip border-2 px-3 py-2 ${
-                      unidad === u ? 'border-oliva bg-oliva text-crema-claro' : 'border-contorno/40 bg-crema-claro text-oliva-oscuro'
+                      unidad === u ? 'border-oliva bg-oliva text-crema-claro' : 'border-borde/40 bg-crema-claro text-oliva-oscuro'
                     }`}
                   >
                     {u}
@@ -213,7 +213,7 @@ export default function BuscadorAlimento({
 
           {/* Única zona que scrollea: la lista. Los márgenes negativos son para
               que las tarjetas lleguen al borde del modal al desplazarse. */}
-          <div className="-mx-5 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto border-t border-contorno/15 px-5 pt-3">
+          <div className="-mx-5 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto border-t border-borde/15 px-5 pt-3">
             {/* Catálogo del hogar: instantáneo y sin API */}
             {locales.length > 0 && (
               <div className="space-y-1.5">
@@ -349,7 +349,7 @@ export function FormAlimentoManual({ inicial, nombreInicial = '', onCrear, onCan
               type="button"
               onClick={() => setUnidad(u)}
               className={`chip border-2 px-4 py-2 ${
-                unidad === u ? 'border-oliva bg-oliva text-crema-claro' : 'border-contorno/40 bg-crema-claro text-oliva-oscuro'
+                unidad === u ? 'border-oliva bg-oliva text-crema-claro' : 'border-borde/40 bg-crema-claro text-oliva-oscuro'
               }`}
             >
               {u}

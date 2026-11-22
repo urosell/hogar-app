@@ -8,6 +8,7 @@ import { useTheme } from './context/ThemeContext'
 import { useIdioma } from './context/IdiomaContext'
 import { MODULOS } from './data/modulos'
 import BottomNav from './components/BottomNav'
+import SideNav from './components/SideNav'
 import Login from './pages/Login'
 import OnboardingHogar from './pages/OnboardingHogar'
 import OnboardingPerfil from './pages/OnboardingPerfil'
@@ -87,7 +88,11 @@ export default function App() {
   if (!perfilCompleto) return <OnboardingPerfil />
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col">
+    // En el PC (≥ lg) la app deja de ser una columna de móvil: barra lateral
+    // con todas las secciones a la izquierda y el contenido a todo lo ancho.
+    <div className="flex min-h-full">
+    <SideNav activo={tab} onCambiar={cambiarTab} />
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col lg:max-w-6xl lg:px-6">
       {/* Cabecera */}
       <header
         className="sticky top-0 z-20 flex items-center justify-between px-4 pb-3 backdrop-blur"
@@ -97,7 +102,7 @@ export default function App() {
           backgroundColor: 'rgb(var(--fondo-a) / 0.72)',
         }}
       >
-        <h1 className="text-2xl font-bold text-bosque">{TITULOS[tab]}</h1>
+        <h1 className="text-2xl font-bold text-bosque lg:text-3xl">{TITULOS[tab]}</h1>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setHistorialAbierto(true)}
@@ -154,7 +159,7 @@ export default function App() {
           muestran/ocultan, para conservar datos y listeners entre cambios
           de pestaña (evita el parpadeo de recarga). Las secciones desactivadas
           en Ajustes no se montan: así tampoco abren listeners de Firestore. */}
-      <main className="flex-1 overflow-x-hidden px-4 pb-28">
+      <main className="flex-1 overflow-x-hidden px-4 pb-28 lg:pb-10">
         {activa('tareas') && (
           <div className={tab === 'tareas' ? `tab-slide-${dir}` : 'hidden'}>
             <Tareas seccion={seccionTareas} setSeccion={setSeccionTareas} onPendientes={setPendientesAprobar} />
@@ -195,6 +200,7 @@ export default function App() {
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }

@@ -46,7 +46,7 @@ export default function Recordatorios() {
       {lista.length === 0 ? (
         <Vacio emoji="⏰" titulo={t('rec.vacioTitulo')} texto={t('rec.vacioTexto')} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid items-start gap-3 lg:grid-cols-2">
           {lista.map((rec) => (
             <TarjetaRecordatorio
               key={rec.id}
@@ -65,7 +65,7 @@ export default function Recordatorios() {
 
       <button
         onClick={() => setEditar({})}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
+        className="fixed bottom-24 right-4 z-30 lg:bottom-8 lg:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-oliva text-crema-claro shadow-tarjeta active:scale-95"
         style={{ marginBottom: 'var(--safe-bottom)' }}
         aria-label={t('rec.nuevoAria')}
       >
