@@ -198,6 +198,39 @@ export default function Gym() {
         </div>
       </div>
 
+      {/* Estadísticas: esta semana y este mes, una al lado de la otra */}
+      <section className="space-y-3">
+        <h2 className="text-lg text-bosque">{t('gym.estadisticas')}</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <TarjetaEstadistica
+            titulo={t('gym.estaSemana')}
+            miembros={miembros}
+            valor={(m) => conteos[m.id]?.semana || 0}
+            colorDe={colorDe}
+            fondo="#F6E3D6"
+            icono={
+              <span className="flex items-end gap-1 pb-1" aria-hidden="true">
+                <span className="h-2.5 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
+                <span className="h-4 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
+                <span className="h-3 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
+              </span>
+            }
+          />
+          <TarjetaEstadistica
+            titulo={t('gym.esteMes')}
+            miembros={miembros}
+            valor={(m) => conteos[m.id]?.mes || 0}
+            colorDe={colorDe}
+            fondo="#1D4E5B"
+            icono={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F2C14E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+            }
+          />
+        </div>
+      </section>
+
       {/* Vuestro progreso: barras redondeadas de los últimos 6 meses */}
       <div className="tarjeta">
         <div className="mb-3 flex items-center justify-between">
@@ -233,33 +266,6 @@ export default function Gym() {
         )}
       </div>
 
-      {/* Estadísticas */}
-      <section className="space-y-3">
-        <h2 className="text-lg text-bosque">{t('gym.estadisticas')}</h2>
-        <FilaEstadistica
-          titulo={t('gym.estaSemana')}
-          texto={miembros.map((m) => `${m.nombre} ${conteos[m.id]?.semana || 0}`).join(' · ')}
-          fondo="#F6E3D6"
-          icono={
-            <span className="flex items-end gap-1 pb-1" aria-hidden="true">
-              <span className="h-2.5 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
-              <span className="h-4 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
-              <span className="h-3 w-1.5 rounded-sm" style={{ background: '#C9775A' }} />
-            </span>
-          }
-        />
-        <FilaEstadistica
-          titulo={t('gym.esteMes')}
-          texto={miembros.map((m) => `${m.nombre} ${conteos[m.id]?.mes || 0}`).join(' · ')}
-          fondo="#1D4E5B"
-          icono={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2C14E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" />
-            </svg>
-          }
-        />
-      </section>
-
       {/* Histórico por día (se puede marcar hoy y días anteriores) */}
       <section className="space-y-3">
         <h2 className="text-lg text-bosque">{t('gym.historicoDia')}</h2>
@@ -293,17 +299,28 @@ export default function Gym() {
   )
 }
 
-// Fila de la lista "Estadísticas": baldosa con icono + título + resumen.
-function FilaEstadistica({ titulo, texto, fondo, icono }) {
+// Tarjeta de "Estadísticas": baldosa con icono + título, y debajo los días de
+// cada persona (con su color).
+function TarjetaEstadistica({ titulo, miembros, valor, colorDe, fondo, icono }) {
   return (
-    <div className="flex items-center gap-3.5">
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ background: fondo }}>
-        {icono}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-bosque">{titulo}</span>
-        <span className="block truncate text-xs text-oliva-oscuro">{texto}</span>
-      </span>
+    <div className="tarjeta flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: fondo }}>
+          {icono}
+        </span>
+        <span className="min-w-0 text-sm font-semibold leading-tight text-bosque">{titulo}</span>
+      </div>
+      <div className="space-y-1.5">
+        {miembros.map((m) => (
+          <div key={m.id} className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1.5 text-xs text-oliva-oscuro">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorDe[m.id] }} />
+              <span className="truncate">{m.nombre}</span>
+            </span>
+            <span className="text-lg font-bold leading-none text-bosque">{valor(m)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
