@@ -287,6 +287,10 @@ const ES = {
   'gym.quienFue': '¿Quién fue al gym ese día?',
   'gym.fue': '✓ Fue',
   'gym.fechaBonita': '{dia} de {mes} de {anio}',
+  'gym.progreso': 'Vuestro progreso',
+  'gym.ultimos6': 'Últimos 6 meses',
+  'gym.estadisticas': 'Estadísticas',
+  'gym.historicoDia': 'Histórico por día',
 
   // Marketplace
   'mk.tabCatalogo': 'Catálogo',
@@ -880,6 +884,10 @@ const CA = {
   'gym.quienFue': 'Qui va anar al gym aquell dia?',
   'gym.fue': '✓ Hi va anar',
   'gym.fechaBonita': '{dia} de {mes} de {anio}',
+  'gym.progreso': 'El vostre progrés',
+  'gym.ultimos6': 'Últims 6 mesos',
+  'gym.estadisticas': 'Estadístiques',
+  'gym.historicoDia': 'Històric per dia',
 
   // Marketplace
   'mk.tabCatalogo': 'Catàleg',
