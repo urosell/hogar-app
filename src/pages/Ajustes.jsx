@@ -16,6 +16,7 @@ import { useIdioma } from '../context/IdiomaContext'
 import { IDIOMAS } from '../data/i18n'
 import { perfilCompleto, objetivoMacros } from '../data/nutricion'
 import PerfilNutricional from './dietas/PerfilNutricional'
+import { useGatasActivas, setGatasActivas } from '../components/gatas/preferencia'
 
 const TIPOS = [
   { clave: 'tareas', labelKey: 'aj.notiTareas', descKey: 'aj.notiTareasDesc' },
@@ -28,6 +29,7 @@ export default function Ajustes({ abierto, onCerrar }) {
   const { uid, usuario, hogar, companeros, modulos } = useApp()
   const { theme, setTheme } = useTheme()
   const { idioma, setIdioma, t } = useIdioma()
+  const gatasActivas = useGatasActivas()
   const [nombre, setNombre] = useState('')
   const [icono, setIcono] = useState('')
   const [editandoAvatar, setEditandoAvatar] = useState(false)
@@ -225,6 +227,14 @@ export default function Ajustes({ abierto, onCerrar }) {
                 {i.label}
               </button>
             ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-bosque">{t('aj.gatas')}</p>
+              <p className="text-xs text-oliva-oscuro/60">{t('aj.gatasDesc')}</p>
+            </div>
+            <Toggle activo={gatasActivas} onClick={() => setGatasActivas(!gatasActivas)} />
           </div>
         </Desplegable>
 
